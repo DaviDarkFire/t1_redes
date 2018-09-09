@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <fcntl.h>
+#include "request_handler.c"
 
 #define LISTEN_ENQ 5
 #define PORT 1
@@ -86,8 +87,18 @@ int main(int argc, char** argv) {
 
 
 
-			// colocar caminho dinamico de acordo com request depois ########################
-			sendFile("files/index.html", newsockfd); 
+
+			char* requestLine = getRequestLine(buffer);
+
+			if(!checkRequestLine(requestLine)){
+				printf("%s\n", "Bad request");
+
+			}else{
+
+				char* core = getCore(requestLine);
+				//TODO: diferenciar arquivo de pasta
+				sendFile(core, newsockfd); 
+			}			 
 
 			close(newsockfd);
 
@@ -103,21 +114,19 @@ int main(int argc, char** argv) {
 	return 0; 
 }
 
-void parseRequest(char* requestLine){
-
-    for (i = 0; i < strlen(requestLine); i++){
-
-    	printf("%c\n", requestLine[i]);
-    }
-
-}
-
 void sendFile(char *filePath, int sockfd){
 	FILE *fileToBeSent;
 	long size;
 	char *sender;
 
-	fileToBeSent = fopen(filePath, "rb");
+	if(filePath[0] == '/'){
+		fileToBeSent = fopen(filePath+1, "rb");
+	}else{
+		fileToBeSent = fopen(filePath, "rb");
+		
+	}
+
+	
 
 	if(fileToBeSent){
 		fseek(fileToBeSent, 0, SEEK_END); // coloca indicador no fim do arquivo
