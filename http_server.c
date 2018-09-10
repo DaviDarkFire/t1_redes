@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -11,8 +12,13 @@
 
 #define LISTEN_ENQ 5
 #define PORT 1
+#define BUFFSIZE 1024
 
 void sendFile(char * filePath, int sockfd);
+int checkFileExistence(char* filePath);
+void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd);
+char * getDocType(char *filePath);
+char* getContentLen(char* filePath);
 
 int main(int argc, char** argv) {
 	int n;
@@ -90,16 +96,32 @@ int main(int argc, char** argv) {
 
 			char* requestLine = getRequestLine(buffer);
 
-			if(!checkRequestLine(requestLine)){
-				printf("%s\n", "Bad request");
+			int reqLineIsOK, fileExists; 
 
+			reqLineIsOK = checkRequestLine(requestLine);
+
+			if(!reqLineIsOK){
+				printf("request line is not ok\n"); //DEBUG
+				sendResponseHeader(reqLineIsOK, 0, "doesntmatter.png", newsockfd);
 			}else{
-
+				printf("request line is ok\n");//DEBUG		
 				char* core = getCore(requestLine);
+				printf("Passou do getCore\n"); //DEBUG
 				//TODO: diferenciar arquivo de pasta
-				sendFile(core, newsockfd); 
-			}			 
+				fileExists = checkFileExistence(core);
+				printf("Passou do checkFileExistence\n"); //DEBUG
+				sendResponseHeader(reqLineIsOK, fileExists, core, newsockfd);
+				printf("Passou do sendResponseHeader\n"); //DEBUG
+				if(fileExists)
+				{
+					printf("File exists\n");//DEBUG
+					sendFile(core, newsockfd);			 
+				}else{
+					printf("File not exists\n");//DEBUG
 
+				}
+			}
+			
 			close(newsockfd);
 
 			return 0;
@@ -123,11 +145,8 @@ void sendFile(char *filePath, int sockfd){
 		fileToBeSent = fopen(filePath+1, "rb");
 	}else{
 		fileToBeSent = fopen(filePath, "rb");
-		
+
 	}
-
-	
-
 	if(fileToBeSent){
 		fseek(fileToBeSent, 0, SEEK_END); // coloca indicador no fim do arquivo
 		size = ftell(fileToBeSent); // pega o tamanho usando o indicador
@@ -139,4 +158,119 @@ void sendFile(char *filePath, int sockfd){
 		fclose(fileToBeSent);
 		free(sender);
 	}
+}
+
+int checkFileExistence(char* filePath){
+    FILE *file;
+
+    if(filePath[0] == '/'){
+		file = fopen(filePath+1, "rb");
+	}else{
+		file = fopen(filePath, "rb");
+
+	}
+
+    if (file)
+    {
+
+        fclose(file);
+        return 1;
+    }
+    return 0;
+}
+
+
+void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd){
+
+	// char* responseHeader = malloc(sizeof(char)*BUFFSIZE);
+	// char responseHeader[BUFFSIZE];
+
+	// Dados de Date:
+	char date[29];
+  	time_t now = time(0);
+  	struct tm tm = *gmtime(&now);
+  	strftime(date, sizeof(date), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+
+	if(!reqLineIsOK){
+		printf("req line is not ok\n");//DEBUG
+		// TODO: Erro para bad request
+	}
+	else {
+		printf("req line is ok\n");//DEBUG
+		if(fileExists){
+			printf("file exists\n");//DEBUG
+			char* docType = getDocType(core);
+			printf("Passou da getDocType\n");//DEBUG
+			char responseHeader[BUFFSIZE] = "HTTP/1.1 200 Document follows";
+			printf("atribuiu responseHeader\n");//DEBUG
+			char* aux;//DEBUG
+			aux = strcat(responseHeader, "\r\n");//DEBUG
+			printf("primeiro strcat\n");//DEBUG
+			strcat(responseHeader, "Date: ");
+			printf("1date: %s\n", date);//DEBUG
+			strcat(responseHeader, date);
+			printf("2date: %s\n", date);//DEBUG
+			strcat(responseHeader, "\r\n");
+			strcat(responseHeader, "Server: FACOMRC-2018/1.0");
+			strcat(responseHeader, "\r\n");
+			strcat(responseHeader, "Content-Length: ");
+			strcat(responseHeader, getContentLen(core));
+			strcat(responseHeader, "\r\n");
+			printf("Passou da getContentLen\n");//DEBUG
+			strcat(responseHeader, "Content-Type: ");
+			strcat(responseHeader, docType);
+			strcat(responseHeader, "\r\n\0");
+			printf("%s\n", responseHeader);
+			printf("HEader escrito\n"); //DEBUG
+			send(sockfd, responseHeader, strlen(responseHeader), 0); // manda ao socket os dados que armazenamos em sender
+		}
+		else{
+			// TODO: erro para arquivo inexistente
+		}
+	}
+}
+
+
+
+char * getDocType(char *filePath){
+  char * ext;
+  ext = strrchr(filePath, '.');
+  
+  if (strcmp(ext, ".html") == 0 || strcmp(ext, ".htm") == 0) return "text/html";
+  if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) return "image/jpeg";
+  if (strcmp(ext, ".gif") == 0) return "image/gif";
+  if (strcmp(ext, ".png") == 0) return "image/png";
+  if (strcmp(ext, ".css") == 0) return "text/css";
+  if (strcmp(ext, ".au") == 0) return "audio/basic";
+  if (strcmp(ext, ".wav") == 0) return "audio/wav";
+  if (strcmp(ext, ".avi") == 0) return "video/x-msvideo";
+  if (strcmp(ext, ".mpeg") == 0 || strcmp(ext, ".mpg") == 0) return "video/mpeg";
+  if (strcmp(ext, ".mp3") == 0) return "audio/mpeg";
+  if (strcmp(ext, ".js") == 0) return "text/javascript";
+  if (strcmp(ext, ".ico") == 0) return "image/x-icon";
+  
+  return NULL;
+}
+
+char* getContentLen(char* filePath){
+	printf("entrou na content len\n");//DEBUG
+	FILE *file;
+	long size;
+
+	if(filePath[0] == '/'){
+		printf("tem barra\n");//DEBUG
+		file = fopen(filePath+1, "rb");
+	}else{
+		printf("Não tem barra\n");//DEBUG
+		file = fopen(filePath, "rb");
+
+	}
+
+	fseek(file, 0, SEEK_END); // coloca indicador no fim do arquivo
+	size = ftell(file); // pega o tamanho usando o indicador
+	char* str = malloc(sizeof(char)*10);
+	sprintf(str, "%d", (int) size);
+	printf("STR: %s\n", str);//DEBUG
+	return str;
+
 }
