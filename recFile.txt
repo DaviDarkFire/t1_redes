@@ -1,5 +1,5 @@
 HTTP/1.1 200 Document follows
-Date: Mon, 10 Sep 2018 01:56:52 
+Date: Mon, 10 Sep 2018 22:58:03 Ì‡æU
 Server: FACOMRC-2018/1.0
 Content-Length: 99
 Content-Type: text/html
@@ -8,5 +8,4 @@ Content-Type: text/html
     <h1>CU</h1>
   </header>
   <p>Lorem Ipsum dolor set amet....</p>
-</article>Length: 99
-Content-Type: text/html
+</article>

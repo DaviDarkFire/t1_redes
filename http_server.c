@@ -101,24 +101,21 @@ int main(int argc, char** argv) {
 			reqLineIsOK = checkRequestLine(requestLine);
 
 			if(!reqLineIsOK){
-				printf("request line is not ok\n"); //DEBUG
 				sendResponseHeader(reqLineIsOK, 0, "doesntmatter.png", newsockfd);
 			}else{
-				printf("request line is ok\n");//DEBUG		
 				char* core = getCore(requestLine);
-				printf("Passou do getCore\n"); //DEBUG
 				//TODO: diferenciar arquivo de pasta
 				fileExists = checkFileExistence(core);
-				printf("Passou do checkFileExistence\n"); //DEBUG
-				sendResponseHeader(reqLineIsOK, fileExists, core, newsockfd);
-				printf("Passou do sendResponseHeader\n"); //DEBUG
-				if(fileExists)
-				{
-					printf("File exists\n");//DEBUG
-					sendFile(core, newsockfd);			 
-				}else{
-					printf("File not exists\n");//DEBUG
+				if(strcmp(core, "/") == 0){
+					sendResponseHeader(reqLineIsOK, 1, "docs/index.html", newsockfd);
 
+				}else{
+					sendResponseHeader(reqLineIsOK, fileExists, core, newsockfd);
+
+				}
+				if(fileExists || strcmp(core, "/") == 0)
+				{
+					sendFile(core, newsockfd);			 
 				}
 			}
 			
@@ -141,11 +138,17 @@ void sendFile(char *filePath, int sockfd){
 	long size;
 	char *sender;
 
-	if(filePath[0] == '/'){
-		fileToBeSent = fopen(filePath+1, "rb");
-	}else{
-		fileToBeSent = fopen(filePath, "rb");
+	if(strcmp(filePath, "/") == 0){
 
+		fileToBeSent = fopen("docs/index.html", "rb");
+
+	}else{
+		if(filePath[0] == '/'){
+			fileToBeSent = fopen(filePath+1, "rb");
+		}else{
+			fileToBeSent = fopen(filePath, "rb");
+
+		}
 	}
 	if(fileToBeSent){
 		fseek(fileToBeSent, 0, SEEK_END); // coloca indicador no fim do arquivo
@@ -196,32 +199,23 @@ void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd)
 		// TODO: Erro para bad request
 	}
 	else {
-		printf("req line is ok\n");//DEBUG
 		if(fileExists){
-			printf("file exists\n");//DEBUG
 			char* docType = getDocType(core);
-			printf("Passou da getDocType\n");//DEBUG
 			char responseHeader[BUFFSIZE] = "HTTP/1.1 200 Document follows";
-			printf("atribuiu responseHeader\n");//DEBUG
 			char* aux;//DEBUG
 			aux = strcat(responseHeader, "\r\n");//DEBUG
-			printf("primeiro strcat\n");//DEBUG
 			strcat(responseHeader, "Date: ");
-			printf("1date: %s\n", date);//DEBUG
 			strcat(responseHeader, date);
-			printf("2date: %s\n", date);//DEBUG
 			strcat(responseHeader, "\r\n");
 			strcat(responseHeader, "Server: FACOMRC-2018/1.0");
 			strcat(responseHeader, "\r\n");
 			strcat(responseHeader, "Content-Length: ");
 			strcat(responseHeader, getContentLen(core));
 			strcat(responseHeader, "\r\n");
-			printf("Passou da getContentLen\n");//DEBUG
 			strcat(responseHeader, "Content-Type: ");
 			strcat(responseHeader, docType);
 			strcat(responseHeader, "\r\n\0");
 			printf("%s\n", responseHeader);
-			printf("HEader escrito\n"); //DEBUG
 			send(sockfd, responseHeader, strlen(responseHeader), 0); // manda ao socket os dados que armazenamos em sender
 		}
 		else{
