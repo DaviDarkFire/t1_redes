@@ -1,11 +1,90 @@
 HTTP/1.1 200 Document follows
-Date: Mon, 10 Sep 2018 22:58:03 ÃáÊU
+Date: Tue, 11 Sep 2018 02:34:11 ¥n'
 Server: FACOMRC-2018/1.0
-Content-Length: 99
+Content-Length: 151
 Content-Type: text/html
-<article>
-  <header>
-    <h1>CU</h1>
-  </header>
-  <p>Lorem Ipsum dolor set amet....</p>
-</article>
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Page Title</title>
+</head>
+
+<body>
+The content of the document......
+</body>
+
+</html>
+HTTP/1.1 200 Document follows
+Date: Tue, 11 Sep 2018 02:36:17 )çÂ
+Server: FACOMRC-2018/1.0
+Content-Length: 151
+Content-Type: text/html
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Page Title</title>
+</head>
+
+<body>
+The content of the document......
+</body>
+
+</html>
+HTTP/1.1 200 Document follows
+Date: Tue, 11 Sep 2018 02:41:38 )çÂ
+Server: FACOMRC-2018/1.0
+Content-Length: 151
+Content-Type: text/html
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Page Title</title>
+</head>
+
+<body>
+The content of the document......
+</body>
+
+</html>
+HTTP/1.1 200 Document follows
+Date: Tue, 11 Sep 2018 02:44:49 Úb˝
+Server: FACOMRC-2018/1.0
+Content-Length: 151
+Content-Type: text/html
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Page Title</title>
+</head>
+
+<body>
+The content of the document......
+</body>
+
+</html>
+HTTP/1.1 200 Document follows
+Date: Tue, 11 Sep 2018 02:52:04 ¯
+Server: FACOMRC-2018/1.0
+Content-Length: 151
+Content-Type: text/html
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Page Title</title>
+</head>
+
+<body>
+The content of the document......
+</body>
+
+</html>

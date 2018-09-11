@@ -4,133 +4,138 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include "request_handler.c"
+#include <semaphore.h>
 
 #define LISTEN_ENQ 5
-#define PORT 1
+#define FORKORTHREAD 1
+#define PORTF 2
+#define PORTT 3
+#define FORK 0
+#define THREAD 1
 #define BUFFSIZE 1024
+#define NTHREADS 2
+
+sem_t mutex;
 
 void sendFile(char * filePath, int sockfd);
 int checkFileExistence(char* filePath);
 void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd);
 char * getDocType(char *filePath);
 char* getContentLen(char* filePath);
+int createSocket(int port);
+void forkExecution(int sockfd);
 
 int main(int argc, char** argv) {
-	int n;
-	int m;
-	pid_t pid; //id do processo
-	int sockfd; //file descriptor do server
-	int clilen; //tamnho do cliente
-	int newsockfd; //file descriptor pra cada conexão de cliente
-	char buffer[256];
 
-	struct sockaddr_in serv_addr; //esctrutura do server
-	struct sockaddr_in cli_addr; //estrutura do cliente
-  
-	if(argc != 2) { //ensinando o user como iniciar o server 
-		fprintf(stderr, "Usage: %s <port>\n", argv[0]);
+	int forkOrThread;
+	int sockfd;
+	int port;
+
+	if(argc != 3) { //ensinando o user como iniciar o server
+		fprintf(stderr, "Usage: %s <-f or -t> <if -t, n threads> <port>\n", argv[0]);
 		exit(1);
 	}
-  
-	sockfd = socket(AF_INET, SOCK_STREAM, 0); //cria o socket
-	if(sockfd < 0) {
-		fprintf(stderr, "ERROR: %s\n", strerror(errno));
-		exit(1);
-	} //se der erro aborta 
-   
-	memset((char*) &serv_addr, 0, sizeof(serv_addr)); //zera o serv_addr
-  
-	serv_addr.sin_family = AF_INET; //definindo os valores do server
-	serv_addr.sin_addr.s_addr = INADDR_ANY; 
-	serv_addr.sin_port = htons(atoi(argv[PORT]));//porta do servidor 
 
-	if(bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) { //associa socket a porta que será usada
+
+	sockfd = createSocket(port);
+
+	if(strcmp(argv[FORKORTHREAD], "-f") == 0){
+		forkOrThread = FORK;
+		port = atoi(argv[PORTF]);
+	}
+	else if(strcmp(argv[FORKORTHREAD], "-t") == 0){
+		forkOrThread = THREAD;
+		port = atoi(argv[PORTT]);
+	}
+
+	// TODO sig chld
+
+	if(listen(sockfd, LISTEN_ENQ) < 0) { //escuta requisições ao server
 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
 		exit(1);
 	}
-  
-	if(listen(sockfd, LISTEN_ENQ) < 0) { //escuta requisições ao socket (muito provavelmente requisições a porta)
-		fprintf(stderr, "ERROR: %s\n", strerror(errno));
-		exit(1);
+	if(forkOrThread == FORK){
+		forkExecution(sockfd);
 	}
-
-	clilen = sizeof(cli_addr);
-
-	// talvez aqui vire uma funçao do servidor via fork
-	while(1) { //loop d conexão	
-		newsockfd = accept(sockfd, (struct sockaddr*) &cli_addr, (unsigned int*) &clilen);//tenta nova conexão
-		if(newsockfd < 0) { //verifica erro
-			fprintf(stderr, "ERROR: %s\n", strerror(errno));
-			exit(1);
-		}
-
-		pid = fork(); //cria um novo processo
-		if(pid < 0) { //erro no fork?
-			fprintf(stderr, "ERROR: %s\n", strerror(errno));
-			exit(1);
-		}
-		
-		if(pid == 0) { 
-			// estamos no filho
-			close(sockfd);
-			
-			memset(buffer, 0, sizeof(buffer));
-  
-			if(n = recv(newsockfd, buffer, sizeof(buffer), 0) < 0) {
-				fprintf(stderr, "ERROR: %s\n", strerror(errno));
-				exit(1);
-			}
-			// buffer[n] =
-  			
-
-
-			printf("Mensagem recebida: %s\n", buffer);
-
-
-
-
-			char* requestLine = getRequestLine(buffer);
-
-			int reqLineIsOK, fileExists; 
-
-			reqLineIsOK = checkRequestLine(requestLine);
-
-			if(!reqLineIsOK){
-				sendResponseHeader(reqLineIsOK, 0, "doesntmatter.png", newsockfd);
-			}else{
-				char* core = getCore(requestLine);
-				//TODO: diferenciar arquivo de pasta
-				fileExists = checkFileExistence(core);
-				if(strcmp(core, "/") == 0){
-					sendResponseHeader(reqLineIsOK, 1, "docs/index.html", newsockfd);
-
-				}else{
-					sendResponseHeader(reqLineIsOK, fileExists, core, newsockfd);
-
-				}
-				if(fileExists || strcmp(core, "/") == 0)
-				{
-					sendFile(core, newsockfd);			 
-				}
-			}
-			
-			close(newsockfd);
-
-			return 0;
-		} else {
-			//Parent ou Child?
-			close(newsockfd);
+	else{
+		if(forkOrThread == THREAD){
+			// threadExecution(sockfd, argv[NTHREADS]);
 		}
 	}
 
-	close(sockfd);
+/////////////////////////////////////////// acabou main?
+	// clilen = sizeof(cli_addr);
+	//
+	// // talvez aqui vire uma funçao do servidor via fork
+	// while(1) { //loop d conexão
+	// 	newsockfd = accept(sockfd, (struct sockaddr*) &cli_addr, (unsigned int*) &clilen);//tenta nova conexão
+	// 	if(newsockfd < 0) { //verifica erro
+	// 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
+	// 		exit(1);
+	// 	}
+	//
+	// 	pid = fork(); //cria um novo processo
+	// 	if(pid < 0) { //erro no fork?
+	// 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
+	// 		exit(1);
+	// 	}
+	//
+	// 	if(pid == 0) {
+	// 		// estamos no filho
+	// 		close(sockfd);
+	//
+	// 		memset(buffer, 0, sizeof(buffer));
+	//
+	// 		if(n = recv(newsockfd, buffer, sizeof(buffer), 0) < 0) {
+	// 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
+	// 			exit(1);
+	// 		}
+	//
+	// 		printf("Mensagem recebida: %s\n", buffer);
+	//
+	// 		char* requestLine = getRequestLine(buffer);
+	//
+	// 		int reqLineIsOK, fileExists;
+	//
+	// 		reqLineIsOK = checkRequestLine(requestLine);
+	//
+	// 		if(!reqLineIsOK){
+	// 			sendResponseHeader(reqLineIsOK, 0, "doesntmatter.png", newsockfd);
+	// 		}else{
+	// 			char* core = getCore(requestLine);
+	// 			//TODO: diferenciar arquivo de pasta
+	// 			fileExists = checkFileExistence(core);
+	// 			if(strcmp(core, "/") == 0){
+	// 				sendResponseHeader(reqLineIsOK, 1, "docs/index.html", newsockfd);
+	//
+	// 			}else{
+	// 				sendResponseHeader(reqLineIsOK, fileExists, core, newsockfd);
+	//
+	// 			}
+	// 			if(fileExists || strcmp(core, "/") == 0)
+	// 			{
+	// 				sendFile(core, newsockfd);
+	// 			}
+	// 		}
+	//
+	// 		// close(newsockfd); // DEBUG
+	//
+	// 		return 0;
+	// 	} else {
+	// 		//Parent ou Child?
+	// 		close(newsockfd);
+	// 	}
+	// }
+	//
+	// close(sockfd);
 
-	return 0; 
+	return 0;
 }
 
 void sendFile(char *filePath, int sockfd){
@@ -170,18 +175,14 @@ int checkFileExistence(char* filePath){
 		file = fopen(filePath+1, "rb");
 	}else{
 		file = fopen(filePath, "rb");
-
 	}
-
     if (file)
     {
-
         fclose(file);
         return 1;
     }
     return 0;
 }
-
 
 void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd){
 
@@ -202,11 +203,12 @@ void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd)
 		if(fileExists){
 			char* docType = getDocType(core);
 			char responseHeader[BUFFSIZE] = "HTTP/1.1 200 Document follows";
-			char* aux;//DEBUG
-			aux = strcat(responseHeader, "\r\n");//DEBUG
-			strcat(responseHeader, "Date: ");
-			strcat(responseHeader, date);
+
 			strcat(responseHeader, "\r\n");
+			// strcat(responseHeader, "Connection: keep-alive\r\n"); // DEBUG
+			strcat(responseHeader, "Date: "); //DEBUG
+			strcat(responseHeader, date); // DEBUG
+			strcat(responseHeader, "\r\n"); // DEBUG
 			strcat(responseHeader, "Server: FACOMRC-2018/1.0");
 			strcat(responseHeader, "\r\n");
 			strcat(responseHeader, "Content-Length: ");
@@ -229,7 +231,7 @@ void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd)
 char * getDocType(char *filePath){
   char * ext;
   ext = strrchr(filePath, '.');
-  
+
   if (strcmp(ext, ".html") == 0 || strcmp(ext, ".htm") == 0) return "text/html";
   if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) return "image/jpeg";
   if (strcmp(ext, ".gif") == 0) return "image/gif";
@@ -242,7 +244,7 @@ char * getDocType(char *filePath){
   if (strcmp(ext, ".mp3") == 0) return "audio/mpeg";
   if (strcmp(ext, ".js") == 0) return "text/javascript";
   if (strcmp(ext, ".ico") == 0) return "image/x-icon";
-  
+
   return NULL;
 }
 
@@ -257,9 +259,7 @@ char* getContentLen(char* filePath){
 	}else{
 		printf("Não tem barra\n");//DEBUG
 		file = fopen(filePath, "rb");
-
 	}
-
 	fseek(file, 0, SEEK_END); // coloca indicador no fim do arquivo
 	size = ftell(file); // pega o tamanho usando o indicador
 	char* str = malloc(sizeof(char)*10);
@@ -268,3 +268,128 @@ char* getContentLen(char* filePath){
 	return str;
 
 }
+
+int createSocket(int port){ // passar argv[PORT]
+
+	int sockfd; //file descriptor do server
+	struct sockaddr_in serv_addr; //esctrutura do server
+
+	sockfd = socket(AF_INET, SOCK_STREAM, 0); //cria o socket
+	if(sockfd < 0) {
+		fprintf(stderr, "ERROR: %s\n", strerror(errno));
+		exit(1);
+	} //se der erro aborta
+
+	memset((char*) &serv_addr, 0, sizeof(serv_addr)); //zera o serv_addr
+
+	serv_addr.sin_family = AF_INET; //definindo os valores do server
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	serv_addr.sin_port = htons(port);//porta do servidor
+
+	if(bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) { //associa socket a porta que será usada
+		fprintf(stderr, "ERROR: %s\n", strerror(errno));
+		exit(1);
+	}
+	return sockfd;
+}
+
+void forkExecution(int sockfd){
+	printf("entrou na connection with fork"); // DEBUG
+	int clilen; //tamnho do cliente
+	struct sockaddr_in cli_addr; //estrutura do cliente
+	pid_t pid; //id do processo
+	int connfd; //file descriptor pra cada conexão de cliente
+	char buffer[256];
+	int n;
+
+	clilen = sizeof(cli_addr);
+
+	while(1) { //loop d conexão
+		connfd = accept(sockfd, (struct sockaddr*) &cli_addr, (unsigned int*) &clilen);//tenta nova conexão
+		if(connfd < 0) { //verifica erro
+			fprintf(stderr, "ERROR: %s\n", strerror(errno));
+			printf("if1\n"); // DEBUG
+			exit(1);
+		}
+
+		pid = fork(); //cria um novo processo
+		if(pid < 0) { //erro no fork?
+			fprintf(stderr, "ERROR: %s\n", strerror(errno));
+			printf("if2\n"); // DEBUG
+			exit(1);
+		}
+
+		if(pid == 0) {
+			// estamos no filho
+			close(sockfd);
+
+			memset(buffer, 0, sizeof(buffer));
+
+			if(n = recv(connfd, buffer, sizeof(buffer), 0) < 0) {
+				fprintf(stderr, "ERROR: %s\n", strerror(errno));
+				printf("if3\n"); // DEBUG
+				exit(1);
+			}
+
+			printf("Mensagem recebida: %s\n", buffer);
+
+			char* requestLine = getRequestLine(buffer);
+
+			int reqLineIsOK, fileExists;
+
+			reqLineIsOK = checkRequestLine(requestLine);
+
+			if(!reqLineIsOK){
+				sendResponseHeader(reqLineIsOK, 0, "doesntmatter.png", connfd);
+			}else{
+				char* core = getCore(requestLine);
+				//TODO: diferenciar arquivo de pasta
+				fileExists = checkFileExistence(core);
+				if(strcmp(core, "/") == 0){
+					sendResponseHeader(reqLineIsOK, 1, "docs/index.html", connfd);
+
+				}else{
+					sendResponseHeader(reqLineIsOK, fileExists, core, connfd);
+
+				}
+				if(fileExists || strcmp(core, "/") == 0)
+				{
+					sendFile(core, connfd);
+				}
+			}
+
+			close(connfd); // DEBUG
+
+		} else {
+			//Parent ou Child?
+			close(connfd);
+		}
+	}
+	close(sockfd);
+}
+
+// void threadExecution(int sockfd, int n){ // receber N threads
+// 	struct sockaddr_in client;
+//   int clientLen;
+//   pthread_t threads[n];
+// 	int i;
+// 	sem_init(&mutex, 0, 1);
+//
+// 	for(i = 0; i < n; i++){
+// 			// pthread_create(&threads[i], NULL, (void*) &threadRoutine, (void*) NULL);
+// 			// dentro da função de execução: antes do accept: usar sem_wait(&mutex); e depois do accept: sem_post(&mutex);
+// 	}
+//
+// 	for(i = 0; i < n; i++){
+// 			pthread_join(thread[i], NULL);
+// 	}
+//
+// 	sem_destroy(&mutex);
+//
+// 	// semaforo va para vermelho > usa accept > semaforo va para verde
+//
+// }
+//
+// void threadRoutine(){
+//
+// }
