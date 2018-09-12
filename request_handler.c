@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#define SECONDSPACEPOS 11 
 
 int checkRequestLine(char * requestLine){
 	if(strncmp("GET", requestLine, 3) == 0){
@@ -8,15 +9,15 @@ int checkRequestLine(char * requestLine){
 
 		if (requestLine[3] == ' '){
 			printf("2\n");
-			printf("Pos: %c////////\n", requestLine[strlen(requestLine)-9]);
-			if(requestLine[strlen(requestLine)-10] == ' '){ //pode variar o valor do -10
+			printf("Pos: %c////////\n", requestLine[strlen(requestLine)-SECONDSPACEPOS]);
+			if(requestLine[strlen(requestLine)-SECONDSPACEPOS] == ' '){ //pode variar o valor do -10
 
 				printf("3\n");
 		
 				int i;
 				char thisShouldBeHTTP[8];
 				for(i = 1; i <= 8; i++){
-					int j = strlen(requestLine) - 10 + i;
+					int j = strlen(requestLine) - SECONDSPACEPOS + i;
 					thisShouldBeHTTP[i-1] = requestLine[j];
 				}
 				thisShouldBeHTTP[8] = '\0';

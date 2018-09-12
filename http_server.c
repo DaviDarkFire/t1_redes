@@ -33,17 +33,16 @@ void forkExecution(int sockfd);
 
 int main(int argc, char** argv) {
 
+
 	int forkOrThread;
 	int sockfd;
 	int port;
+
 
 	if(argc != 3) { //ensinando o user como iniciar o server
 		fprintf(stderr, "Usage: %s <-f or -t> <if -t, n threads> <port>\n", argv[0]);
 		exit(1);
 	}
-
-
-	sockfd = createSocket(port);
 
 	if(strcmp(argv[FORKORTHREAD], "-f") == 0){
 		forkOrThread = FORK;
@@ -54,9 +53,14 @@ int main(int argc, char** argv) {
 		port = atoi(argv[PORTT]);
 	}
 
+	
+	sockfd = createSocket(port);
+	
+
 	// TODO sig chld
 
 	if(listen(sockfd, LISTEN_ENQ) < 0) { //escuta requisições ao server
+		printf("ERRO LISTEN"); //DEBUG
 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
 		exit(1);
 	}
@@ -70,8 +74,15 @@ int main(int argc, char** argv) {
 	}
 
 /////////////////////////////////////////// acabou main?
+
+	// int clilen; //tamnho do cliente
+	// struct sockaddr_in cli_addr; //estrutura do cliente
+	// pid_t pid; //id do processo
+	// int newsockfd; //file descriptor pra cada conexão de cliente
+	// char buffer[256];
+	// int n;
 	// clilen = sizeof(cli_addr);
-	//
+	
 	// // talvez aqui vire uma funçao do servidor via fork
 	// while(1) { //loop d conexão
 	// 	newsockfd = accept(sockfd, (struct sockaddr*) &cli_addr, (unsigned int*) &clilen);//tenta nova conexão
@@ -79,32 +90,32 @@ int main(int argc, char** argv) {
 	// 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
 	// 		exit(1);
 	// 	}
-	//
+	
 	// 	pid = fork(); //cria um novo processo
 	// 	if(pid < 0) { //erro no fork?
 	// 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
 	// 		exit(1);
 	// 	}
-	//
+	
 	// 	if(pid == 0) {
 	// 		// estamos no filho
 	// 		close(sockfd);
-	//
+	
 	// 		memset(buffer, 0, sizeof(buffer));
-	//
+	
 	// 		if(n = recv(newsockfd, buffer, sizeof(buffer), 0) < 0) {
 	// 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
 	// 			exit(1);
 	// 		}
-	//
+	
 	// 		printf("Mensagem recebida: %s\n", buffer);
-	//
+	
 	// 		char* requestLine = getRequestLine(buffer);
-	//
+	
 	// 		int reqLineIsOK, fileExists;
-	//
+	
 	// 		reqLineIsOK = checkRequestLine(requestLine);
-	//
+	
 	// 		if(!reqLineIsOK){
 	// 			sendResponseHeader(reqLineIsOK, 0, "doesntmatter.png", newsockfd);
 	// 		}else{
@@ -113,26 +124,26 @@ int main(int argc, char** argv) {
 	// 			fileExists = checkFileExistence(core);
 	// 			if(strcmp(core, "/") == 0){
 	// 				sendResponseHeader(reqLineIsOK, 1, "docs/index.html", newsockfd);
-	//
+	
 	// 			}else{
 	// 				sendResponseHeader(reqLineIsOK, fileExists, core, newsockfd);
-	//
+	
 	// 			}
 	// 			if(fileExists || strcmp(core, "/") == 0)
 	// 			{
 	// 				sendFile(core, newsockfd);
 	// 			}
 	// 		}
-	//
-	// 		// close(newsockfd); // DEBUG
-	//
+	
+	// 		close(newsockfd); // DEBUG
+	
 	// 		return 0;
 	// 	} else {
 	// 		//Parent ou Child?
 	// 		close(newsockfd);
 	// 	}
 	// }
-	//
+	
 	// close(sockfd);
 
 	return 0;
@@ -162,10 +173,12 @@ void sendFile(char *filePath, int sockfd){
 		sender = (char *) malloc(sizeof(char) * size); // alloca espaço para mandar todo o arquivo
 		fread(sender, 1, size, fileToBeSent); // armazena em sender o arquivo
 		// printf("Dados do sender: %s", sender);
-		send(sockfd, sender, size, 0); // manda ao socket os dados que armazenamos em sender
+		int i = send(sockfd, sender, size, 0); // manda ao socket os dados que armazenamos em sender
+		printf("i: %d\n", i);//DEBUG
 		fclose(fileToBeSent);
 		free(sender);
 	}
+
 }
 
 int checkFileExistence(char* filePath){
@@ -195,6 +208,7 @@ void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd)
   	struct tm tm = *gmtime(&now);
   	strftime(date, sizeof(date), "%a, %d %b %Y %H:%M:%S %Z", &tm);
 
+
 	if(!reqLineIsOK){
 		printf("req line is not ok\n");//DEBUG
 		// TODO: Erro para bad request
@@ -202,7 +216,7 @@ void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd)
 	else {
 		if(fileExists){
 			char* docType = getDocType(core);
-			char responseHeader[BUFFSIZE] = "HTTP/1.1 200 Document follows";
+			char responseHeader[BUFFSIZE] = "HTTP/1.1 200 OK";
 
 			strcat(responseHeader, "\r\n");
 			// strcat(responseHeader, "Connection: keep-alive\r\n"); // DEBUG
@@ -216,6 +230,7 @@ void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd)
 			strcat(responseHeader, "\r\n");
 			strcat(responseHeader, "Content-Type: ");
 			strcat(responseHeader, docType);
+			strcat(responseHeader, "\r\n");
 			strcat(responseHeader, "\r\n\0");
 			printf("%s\n", responseHeader);
 			send(sockfd, responseHeader, strlen(responseHeader), 0); // manda ao socket os dados que armazenamos em sender
@@ -290,12 +305,13 @@ int createSocket(int port){ // passar argv[PORT]
 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
 		exit(1);
 	}
+	printf("sockfd on create socket %d\n", sockfd); //DEBUG
 	return sockfd;
 }
 
 void forkExecution(int sockfd){
-	printf("entrou na connection with fork"); // DEBUG
-	int clilen; //tamnho do cliente
+	printf("entrou na connection with fork\n"); // DEBUG
+	socklen_t clilen; //tamnho do cliente
 	struct sockaddr_in cli_addr; //estrutura do cliente
 	pid_t pid; //id do processo
 	int connfd; //file descriptor pra cada conexão de cliente
@@ -304,8 +320,12 @@ void forkExecution(int sockfd){
 
 	clilen = sizeof(cli_addr);
 
+
 	while(1) { //loop d conexão
+		memset((char*) &cli_addr, 0, sizeof(cli_addr)); //zera o serv_addr
+		printf("sockfd: %d\n", sockfd); //DEBUG
 		connfd = accept(sockfd, (struct sockaddr*) &cli_addr, (unsigned int*) &clilen);//tenta nova conexão
+		printf("connfd: %d\n", connfd); //DEBUG
 		if(connfd < 0) { //verifica erro
 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
 			printf("if1\n"); // DEBUG
@@ -337,6 +357,8 @@ void forkExecution(int sockfd){
 
 			int reqLineIsOK, fileExists;
 
+			printf("REQUESTLINE: %s\n", requestLine);
+			printf("TAMANHO REQUEST LINE: %d\n", (int) strlen(requestLine));
 			reqLineIsOK = checkRequestLine(requestLine);
 
 			if(!reqLineIsOK){
@@ -359,6 +381,8 @@ void forkExecution(int sockfd){
 			}
 
 			close(connfd); // DEBUG
+
+			return;
 
 		} else {
 			//Parent ou Child?
