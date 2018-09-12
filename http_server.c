@@ -30,6 +30,7 @@ char * getDocType(char *filePath);
 char* getContentLen(char* filePath);
 int createSocket(int port);
 void forkExecution(int sockfd);
+void serverRespond(int connfd);
 
 int main(int argc, char** argv) {
 
@@ -53,9 +54,9 @@ int main(int argc, char** argv) {
 		port = atoi(argv[PORTT]);
 	}
 
-	
+
 	sockfd = createSocket(port);
-	
+
 
 	// TODO sig chld
 
@@ -72,79 +73,6 @@ int main(int argc, char** argv) {
 			// threadExecution(sockfd, argv[NTHREADS]);
 		}
 	}
-
-/////////////////////////////////////////// acabou main?
-
-	// int clilen; //tamnho do cliente
-	// struct sockaddr_in cli_addr; //estrutura do cliente
-	// pid_t pid; //id do processo
-	// int newsockfd; //file descriptor pra cada conexão de cliente
-	// char buffer[256];
-	// int n;
-	// clilen = sizeof(cli_addr);
-	
-	// // talvez aqui vire uma funçao do servidor via fork
-	// while(1) { //loop d conexão
-	// 	newsockfd = accept(sockfd, (struct sockaddr*) &cli_addr, (unsigned int*) &clilen);//tenta nova conexão
-	// 	if(newsockfd < 0) { //verifica erro
-	// 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
-	// 		exit(1);
-	// 	}
-	
-	// 	pid = fork(); //cria um novo processo
-	// 	if(pid < 0) { //erro no fork?
-	// 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
-	// 		exit(1);
-	// 	}
-	
-	// 	if(pid == 0) {
-	// 		// estamos no filho
-	// 		close(sockfd);
-	
-	// 		memset(buffer, 0, sizeof(buffer));
-	
-	// 		if(n = recv(newsockfd, buffer, sizeof(buffer), 0) < 0) {
-	// 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
-	// 			exit(1);
-	// 		}
-	
-	// 		printf("Mensagem recebida: %s\n", buffer);
-	
-	// 		char* requestLine = getRequestLine(buffer);
-	
-	// 		int reqLineIsOK, fileExists;
-	
-	// 		reqLineIsOK = checkRequestLine(requestLine);
-	
-	// 		if(!reqLineIsOK){
-	// 			sendResponseHeader(reqLineIsOK, 0, "doesntmatter.png", newsockfd);
-	// 		}else{
-	// 			char* core = getCore(requestLine);
-	// 			//TODO: diferenciar arquivo de pasta
-	// 			fileExists = checkFileExistence(core);
-	// 			if(strcmp(core, "/") == 0){
-	// 				sendResponseHeader(reqLineIsOK, 1, "docs/index.html", newsockfd);
-	
-	// 			}else{
-	// 				sendResponseHeader(reqLineIsOK, fileExists, core, newsockfd);
-	
-	// 			}
-	// 			if(fileExists || strcmp(core, "/") == 0)
-	// 			{
-	// 				sendFile(core, newsockfd);
-	// 			}
-	// 		}
-	
-	// 		close(newsockfd); // DEBUG
-	
-	// 		return 0;
-	// 	} else {
-	// 		//Parent ou Child?
-	// 		close(newsockfd);
-	// 	}
-	// }
-	
-	// close(sockfd);
 
 	return 0;
 }
@@ -315,8 +243,6 @@ void forkExecution(int sockfd){
 	struct sockaddr_in cli_addr; //estrutura do cliente
 	pid_t pid; //id do processo
 	int connfd; //file descriptor pra cada conexão de cliente
-	char buffer[256];
-	int n;
 
 	clilen = sizeof(cli_addr);
 
@@ -342,46 +268,8 @@ void forkExecution(int sockfd){
 		if(pid == 0) {
 			// estamos no filho
 			close(sockfd);
-
-			memset(buffer, 0, sizeof(buffer));
-
-			if(n = recv(connfd, buffer, sizeof(buffer), 0) < 0) {
-				fprintf(stderr, "ERROR: %s\n", strerror(errno));
-				printf("if3\n"); // DEBUG
-				exit(1);
-			}
-
-			printf("Mensagem recebida: %s\n", buffer);
-
-			char* requestLine = getRequestLine(buffer);
-
-			int reqLineIsOK, fileExists;
-
-			printf("REQUESTLINE: %s\n", requestLine);
-			printf("TAMANHO REQUEST LINE: %d\n", (int) strlen(requestLine));
-			reqLineIsOK = checkRequestLine(requestLine);
-
-			if(!reqLineIsOK){
-				sendResponseHeader(reqLineIsOK, 0, "doesntmatter.png", connfd);
-			}else{
-				char* core = getCore(requestLine);
-				//TODO: diferenciar arquivo de pasta
-				fileExists = checkFileExistence(core);
-				if(strcmp(core, "/") == 0){
-					sendResponseHeader(reqLineIsOK, 1, "docs/index.html", connfd);
-
-				}else{
-					sendResponseHeader(reqLineIsOK, fileExists, core, connfd);
-
-				}
-				if(fileExists || strcmp(core, "/") == 0)
-				{
-					sendFile(core, connfd);
-				}
-			}
-
+			serverRespond(connfd);
 			close(connfd); // DEBUG
-
 			return;
 
 		} else {
@@ -417,3 +305,43 @@ void forkExecution(int sockfd){
 // void threadRoutine(){
 //
 // }
+
+void serverRespond(int connfd){
+	char buffer[256];
+	int n;
+	int reqLineIsOK, fileExists;
+
+	memset(buffer, 0, sizeof(buffer));
+
+	if(n = recv(connfd, buffer, sizeof(buffer), 0) < 0) {
+		fprintf(stderr, "ERROR: %s\n", strerror(errno));
+		printf("if3\n"); // DEBUG
+		exit(1);
+	}
+
+	printf("Mensagem recebida: %s\n", buffer);
+
+	char* requestLine = getRequestLine(buffer);
+
+	printf("REQUESTLINE: %s\n", requestLine);
+	printf("TAMANHO REQUEST LINE: %d\n", (int) strlen(requestLine));
+	reqLineIsOK = checkRequestLine(requestLine);
+
+	if(!reqLineIsOK){
+		sendResponseHeader(reqLineIsOK, 0, "doesntmatter.png", connfd);
+	}else{
+		char* core = getCore(requestLine);
+		//TODO: diferenciar arquivo de pasta
+		fileExists = checkFileExistence(core);
+		if(strcmp(core, "/") == 0){
+			sendResponseHeader(reqLineIsOK, 1, "docs/index.html", connfd);
+		}else{
+			sendResponseHeader(reqLineIsOK, fileExists, core, connfd);
+		}
+		
+		if(fileExists || strcmp(core, "/") == 0)
+		{
+			sendFile(core, connfd);
+		}
+	}
+}
