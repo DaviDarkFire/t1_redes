@@ -13,7 +13,7 @@ int checkRequestLine(char * requestLine){
 			if(requestLine[strlen(requestLine)-SECONDSPACEPOS] == ' '){ //pode variar o valor do -10
 
 				printf("3\n");
-		
+
 				int i;
 				char thisShouldBeHTTP[8];
 				for(i = 1; i <= 8; i++){
@@ -24,7 +24,7 @@ int checkRequestLine(char * requestLine){
 
 				if(strcmp("HTTP/1.1", thisShouldBeHTTP) == 0){
 					printf("4\n");
-			
+
 
 					int nofspaces = 0;
 
@@ -33,16 +33,16 @@ int checkRequestLine(char * requestLine){
 						if(requestLine[i] == ' ') nofspaces++;
 					}
 
-			
+
 					if(nofspaces == 2){
 						printf("5\n");
-					
+
 						return 1;
 					}
 				}
 
-			}		
-			
+			}
+
 		}
 	}
 	return 0;
@@ -52,9 +52,9 @@ char* getCore(char* requestLine){
 
 	char *startOfCore = strchr(requestLine, ' ') + 1;
     char *endOfCore = strchr(startOfCore, ' ') - 1;
-  
+
     char* core = malloc(sizeof(char) * (endOfCore - startOfCore+1));
-        
+
     strncpy(core, startOfCore,  endOfCore - startOfCore+1);
     int coreLen = endOfCore - startOfCore+1;
     core[coreLen] = '\0';
@@ -78,12 +78,12 @@ char* getRequestLine(char* buffer){
 
 // int main(int argc, char** argv){
 // 	int r;
-	
+
 // 	// char* requestLine = getRequestLine("HTTP/1.1 <sp> 200 <sp> Document <sp> follows <crlf>\nServer: <sp> <Server-Type> <crlf>\nContent-type: <sp> <Document-Type> <crlf>\n{Outras informa¸c~oes de cabe¸calho}*\n<crlf>\n<Dados do Documento>");
 // 	char* requestLine = getRequestLine("HTTP/1.1 <sp> 200 <sp> Document <sp> follows <crlf>\nServer: <sp> <Server-Type> <crlf>\nContent-type: <sp> <Document-Type> <crlf>\n{Outras informa¸c~oes de cabe¸calho}*\n<crlf>\n<Dados do Documento>");
 // 	printf("Request Line: %s\n", requestLine);
-	
-	
+
+
 // 	return 0;
 
 // }

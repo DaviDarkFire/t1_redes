@@ -31,6 +31,8 @@ char* getContentLen(char* filePath);
 int createSocket(int port);
 void forkExecution(int sockfd);
 void serverRespond(int connfd);
+void threadExecution(int sockfd, int n);
+static void *threadRoutine(void *arg);
 
 int main(int argc, char** argv) {
 
@@ -40,10 +42,10 @@ int main(int argc, char** argv) {
 	int port;
 
 
-	if(argc != 3) { //ensinando o user como iniciar o server
-		fprintf(stderr, "Usage: %s <-f or -t> <if -t, n threads> <port>\n", argv[0]);
-		exit(1);
-	}
+	// if(argc != 3 && argc != 4) { //ensinando o user como iniciar o server
+	// 	fprintf(stderr, "Usage: %s <-f or -t> <if -t, n threads> <port>\n", argv[0]);
+	// 	exit(1);
+	// }
 
 	if(strcmp(argv[FORKORTHREAD], "-f") == 0){
 		forkOrThread = FORK;
@@ -70,7 +72,7 @@ int main(int argc, char** argv) {
 	}
 	else{
 		if(forkOrThread == THREAD){
-			// threadExecution(sockfd, argv[NTHREADS]);
+			threadExecution(sockfd, atoi(argv[NTHREADS]));
 		}
 	}
 
@@ -280,31 +282,43 @@ void forkExecution(int sockfd){
 	close(sockfd);
 }
 
-// void threadExecution(int sockfd, int n){ // receber N threads
-// 	struct sockaddr_in client;
-//   int clientLen;
-//   pthread_t threads[n];
-// 	int i;
-// 	sem_init(&mutex, 0, 1);
-//
-// 	for(i = 0; i < n; i++){
-// 			// pthread_create(&threads[i], NULL, (void*) &threadRoutine, (void*) NULL);
-// 			// dentro da função de execução: antes do accept: usar sem_wait(&mutex); e depois do accept: sem_post(&mutex);
-// 	}
-//
-// 	for(i = 0; i < n; i++){
-// 			pthread_join(thread[i], NULL);
-// 	}
-//
-// 	sem_destroy(&mutex);
-//
-// 	// semaforo va para vermelho > usa accept > semaforo va para verde
-//
-// }
-//
-// void threadRoutine(){
-//
-// }
+void threadExecution(int sockfd, int n){ // receber N threads
+	struct sockaddr_in client;
+  int clilen;
+  pthread_t tids[n];
+	int i;
+	int *iptr;
+	sem_init(&mutex, 0, 1);
+
+	for(i = 0; i < n; i++){
+		iptr = (int *) malloc(sizeof(int));
+		sem_wait(&mutex);
+		*iptr = accept(sockfd, (struct sockaddr*) &client, &clilen);
+		sem_post(&mutex);
+		pthread_create(&tids[i], NULL, (void*) &threadRoutine, iptr);
+			// dentro da função de execução: antes do accept: usar sem_wait(&mutex); e depois do accept: sem_post(&mutex);
+	}
+
+	for(i = 0; i < n; i++){
+			pthread_join(tids[i], NULL);
+	}
+
+	sem_destroy(&mutex);
+
+	// semaforo va para vermelho > usa accept > semaforo va para verde
+	return;
+}
+
+static void *threadRoutine(void *arg){
+	int connfd;
+	connfd = *((int*) arg);
+	// free(arg);
+	pthread_detach(pthread_self());
+	serverRespond(connfd);
+	close(connfd);
+
+	return NULL;
+}
 
 void serverRespond(int connfd){
 	char buffer[256];
@@ -338,7 +352,7 @@ void serverRespond(int connfd){
 		}else{
 			sendResponseHeader(reqLineIsOK, fileExists, core, connfd);
 		}
-		
+
 		if(fileExists || strcmp(core, "/") == 0)
 		{
 			sendFile(core, connfd);
