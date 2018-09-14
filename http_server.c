@@ -128,85 +128,40 @@ int checkFileExistence(char* filePath){
 }
 
 void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd){
-
-	// char* responseHeader = malloc(sizeof(char)*BUFFSIZE);
-	// char responseHeader[BUFFSIZE];
-
 	// Dados de Date:
 	char date[29];
   	time_t now = time(0);
   	struct tm tm = *gmtime(&now);
   	strftime(date, sizeof(date), "%a, %d %b %Y %H:%M:%S %Z", &tm);
-
+		char responseHeader[BUFFSIZE];
 
 	if(!reqLineIsOK){
 		printf("req line is not ok\n");//DEBUG
-		// TODO: Erro para bad request
-		char* docType = getDocType(core);
-		char responseHeader[BUFFSIZE] = "HTTP/1.1 400 Bad Request";
-
-		strcat(responseHeader, "\r\n");
-		// strcat(responseHeader, "Connection: keep-alive\r\n"); // DEBUG
-		strcat(responseHeader, "Date: "); //DEBUG
-		strcat(responseHeader, date); // DEBUG
-		strcat(responseHeader, "\r\n"); // DEBUG
-		strcat(responseHeader, "Server: FACOMRC-2018/1.0");
-		strcat(responseHeader, "\r\n");
-		strcat(responseHeader, "Content-Length: ");
-		strcat(responseHeader, getContentLen(core));
-		strcat(responseHeader, "\r\n");
-		strcat(responseHeader, "Content-Type: ");
-		strcat(responseHeader, docType);
-		strcat(responseHeader, "\r\n");
-		strcat(responseHeader, "\r\n\0");
-		printf("%s\n", responseHeader);
-		send(sockfd, responseHeader, strlen(responseHeader), 0); // manda ao socket os dados que armazenamos em sender
+		strcpy(responseHeader, "HTTP/1.1 400 Bad Request");
 	}
 	else {
 		if(fileExists){
-			char* docType = getDocType(core);
-			char responseHeader[BUFFSIZE] = "HTTP/1.1 200 OK";
-
-			strcat(responseHeader, "\r\n");
-			// strcat(responseHeader, "Connection: keep-alive\r\n"); // DEBUG
-			strcat(responseHeader, "Date: "); //DEBUG
-			strcat(responseHeader, date); // DEBUG
-			strcat(responseHeader, "\r\n"); // DEBUG
-			strcat(responseHeader, "Server: FACOMRC-2018/1.0");
-			strcat(responseHeader, "\r\n");
-			strcat(responseHeader, "Content-Length: ");
-			strcat(responseHeader, getContentLen(core));
-			strcat(responseHeader, "\r\n");
-			strcat(responseHeader, "Content-Type: ");
-			strcat(responseHeader, docType);
-			strcat(responseHeader, "\r\n");
-			strcat(responseHeader, "\r\n\0");
-			printf("%s\n", responseHeader);
-			send(sockfd, responseHeader, strlen(responseHeader), 0); // manda ao socket os dados que armazenamos em sender
+			strcpy(responseHeader, "HTTP/1.1 200 OK");
 		}
 		else{
-			char* docType = getDocType(core);
-			char responseHeader[BUFFSIZE] = "HTTP/1.1 404 Page Not Found";
-
-			strcat(responseHeader, "\r\n");
-			// strcat(responseHeader, "Connection: keep-alive\r\n"); // DEBUG
-			strcat(responseHeader, "Date: "); //DEBUG
-			strcat(responseHeader, date); // DEBUG
-			strcat(responseHeader, "\r\n"); // DEBUG
-			strcat(responseHeader, "Server: FACOMRC-2018/1.0");
-			strcat(responseHeader, "\r\n");
-			strcat(responseHeader, "Content-Length: ");
-			strcat(responseHeader, getContentLen(core));
-			strcat(responseHeader, "\r\n");
-			strcat(responseHeader, "Content-Type: ");
-			strcat(responseHeader, docType);
-			strcat(responseHeader, "\r\n");
-			strcat(responseHeader, "\r\n\0");
-			printf("%s\n", responseHeader);
-			send(sockfd, responseHeader, strlen(responseHeader), 0); // manda ao socket os dados que armazenamos em sender
-			// TODO: erro para arquivo inexistente
+			strcpy(responseHeader, "HTTP/1.1 404 Page Not Found");
 		}
 	}
+	strcat(responseHeader, "\r\n");
+	strcat(responseHeader, "Date: "); //DEBUG
+	strcat(responseHeader, date); // DEBUG
+	strcat(responseHeader, "\r\n"); // DEBUG
+	strcat(responseHeader, "Server: FACOMRC-2018/1.0");
+	strcat(responseHeader, "\r\n");
+	strcat(responseHeader, "Content-Length: ");
+	strcat(responseHeader, getContentLen(core));
+	strcat(responseHeader, "\r\n");
+	strcat(responseHeader, "Content-Type: ");
+	strcat(responseHeader, getDocType(core));
+	strcat(responseHeader, "\r\n");
+	strcat(responseHeader, "\r\n\0");
+	printf("%s\n", responseHeader);
+	send(sockfd, responseHeader, strlen(responseHeader), 0);
 }
 
 
@@ -398,17 +353,5 @@ void serverRespond(int connfd){
 			sendResponseHeader(reqLineIsOK, fileExists, "docs/notfound.html", connfd);
 			sendFile("docs/notfound.html", connfd);
 		}
-		// if(strcmp(core, "/") == 0){
-		// 	sendResponseHeader(reqLineIsOK, 1, "docs/index.html", connfd);
-		// }else{
-		// 	sendResponseHeader(reqLineIsOK, fileExists, core, connfd);
-		// }
-		//
-		// if(fileExists || strcmp(core, "/") == 0)
-		// {
-		// 	sendFile(core, connfd);
-		// } else {
-		// 	sendFile("docs/notfound.html", connfd);
-		// }
 	}
 }

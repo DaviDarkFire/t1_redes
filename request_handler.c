@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#define SECONDSPACEPOS 10
+#define SECONDSPACEPOS 11
 
 int checkRequestLine(char * requestLine){
 	if(strncmp("GET", requestLine, 3) == 0){

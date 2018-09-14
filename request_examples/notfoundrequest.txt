@@ -1,0 +1,1 @@
+GET /docs/essearquivonaoexiste.jpg HTTP/1.1
