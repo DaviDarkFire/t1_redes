@@ -142,6 +142,25 @@ void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd)
 	if(!reqLineIsOK){
 		printf("req line is not ok\n");//DEBUG
 		// TODO: Erro para bad request
+		char* docType = getDocType(core);
+		char responseHeader[BUFFSIZE] = "HTTP/1.1 400 Bad Request";
+
+		strcat(responseHeader, "\r\n");
+		// strcat(responseHeader, "Connection: keep-alive\r\n"); // DEBUG
+		strcat(responseHeader, "Date: "); //DEBUG
+		strcat(responseHeader, date); // DEBUG
+		strcat(responseHeader, "\r\n"); // DEBUG
+		strcat(responseHeader, "Server: FACOMRC-2018/1.0");
+		strcat(responseHeader, "\r\n");
+		strcat(responseHeader, "Content-Length: ");
+		strcat(responseHeader, getContentLen(core));
+		strcat(responseHeader, "\r\n");
+		strcat(responseHeader, "Content-Type: ");
+		strcat(responseHeader, docType);
+		strcat(responseHeader, "\r\n");
+		strcat(responseHeader, "\r\n\0");
+		printf("%s\n", responseHeader);
+		send(sockfd, responseHeader, strlen(responseHeader), 0); // manda ao socket os dados que armazenamos em sender
 	}
 	else {
 		if(fileExists){
@@ -166,6 +185,25 @@ void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd)
 			send(sockfd, responseHeader, strlen(responseHeader), 0); // manda ao socket os dados que armazenamos em sender
 		}
 		else{
+			char* docType = getDocType(core);
+			char responseHeader[BUFFSIZE] = "HTTP/1.1 404 Page Not Found";
+
+			strcat(responseHeader, "\r\n");
+			// strcat(responseHeader, "Connection: keep-alive\r\n"); // DEBUG
+			strcat(responseHeader, "Date: "); //DEBUG
+			strcat(responseHeader, date); // DEBUG
+			strcat(responseHeader, "\r\n"); // DEBUG
+			strcat(responseHeader, "Server: FACOMRC-2018/1.0");
+			strcat(responseHeader, "\r\n");
+			strcat(responseHeader, "Content-Length: ");
+			strcat(responseHeader, getContentLen(core));
+			strcat(responseHeader, "\r\n");
+			strcat(responseHeader, "Content-Type: ");
+			strcat(responseHeader, docType);
+			strcat(responseHeader, "\r\n");
+			strcat(responseHeader, "\r\n\0");
+			printf("%s\n", responseHeader);
+			send(sockfd, responseHeader, strlen(responseHeader), 0); // manda ao socket os dados que armazenamos em sender
 			// TODO: erro para arquivo inexistente
 		}
 	}
@@ -341,21 +379,36 @@ void serverRespond(int connfd){
 	printf("TAMANHO REQUEST LINE: %d\n", (int) strlen(requestLine));
 	reqLineIsOK = checkRequestLine(requestLine);
 
-	if(!reqLineIsOK){
-		sendResponseHeader(reqLineIsOK, 0, "doesntmatter.png", connfd);
-	}else{
+	if(!reqLineIsOK){ // bad request
+		sendResponseHeader(reqLineIsOK, 0, "docs/badrequest.html", connfd);
+		sendFile("docs/badrequest.html", connfd); //
+	}else{ // A request está em formato esperado
 		char* core = getCore(requestLine);
+		if(strcmp(core, "/") == 0){ // tratando caso / => index
+			strcpy(core, "docs/index.html");
+		}
 		//TODO: diferenciar arquivo de pasta
 		fileExists = checkFileExistence(core);
-		if(strcmp(core, "/") == 0){
-			sendResponseHeader(reqLineIsOK, 1, "docs/index.html", connfd);
-		}else{
+		printf("fileExists: %d\n", fileExists); // DEBUG
+		if(fileExists){ // caso ok, enviar arquivo
 			sendResponseHeader(reqLineIsOK, fileExists, core, connfd);
-		}
-
-		if(fileExists || strcmp(core, "/") == 0)
-		{
 			sendFile(core, connfd);
 		}
+		else{ // caso contrário, not found
+			sendResponseHeader(reqLineIsOK, fileExists, "docs/notfound.html", connfd);
+			sendFile("docs/notfound.html", connfd);
+		}
+		// if(strcmp(core, "/") == 0){
+		// 	sendResponseHeader(reqLineIsOK, 1, "docs/index.html", connfd);
+		// }else{
+		// 	sendResponseHeader(reqLineIsOK, fileExists, core, connfd);
+		// }
+		//
+		// if(fileExists || strcmp(core, "/") == 0)
+		// {
+		// 	sendFile(core, connfd);
+		// } else {
+		// 	sendFile("docs/notfound.html", connfd);
+		// }
 	}
 }
