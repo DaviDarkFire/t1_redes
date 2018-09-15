@@ -42,18 +42,24 @@ int main(int argc, char** argv) {
 	int port;
 
 
-	// if(argc != 3 && argc != 4) { //ensinando o user como iniciar o server
-	// 	fprintf(stderr, "Usage: %s <-f or -t> <if -t, n threads> <port>\n", argv[0]);
-	// 	exit(1);
-	// }
+	if(argc < 2 || argc > 4) {
+		fprintf(stderr, "Usage: %s <-f or -t> <if -t, n. of threads> <port>\n", argv[0]);
+		exit(1);
+	}
 
 	if(strcmp(argv[FORKORTHREAD], "-f") == 0){
 		forkOrThread = FORK;
-		port = atoi(argv[PORTF]);
+		if(argc == 3) port = atoi(argv[PORTF]);
+		else port = 8080;
 	}
 	else if(strcmp(argv[FORKORTHREAD], "-t") == 0){
 		forkOrThread = THREAD;
-		port = atoi(argv[PORTT]);
+		if(argc == 4) port = atoi(argv[PORTT]);
+		else port = 8080;
+	}
+	else {
+		fprintf(stderr, "Usage: %s <-f or -t> <if -t, n. of threads> <port>\n", argv[0]);
+		exit(1);
 	}
 
 
