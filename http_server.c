@@ -6,9 +6,11 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <netinet/in.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <signal.h>
 #include "request_handler.c"
 #include <semaphore.h>
 
@@ -33,6 +35,7 @@ void forkExecution(int sockfd);
 void serverRespond(int connfd);
 void threadExecution(int sockfd, int n);
 static void *threadRoutine(void *arg);
+void handleSIGCHLD(int signal);
 
 int main(int argc, char** argv) {
 
@@ -62,17 +65,28 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-
 	sockfd = createSocket(port);
-
-
-	// TODO sig chld
 
 	if(listen(sockfd, LISTEN_ENQ) < 0) { //escuta requisições ao server
 		printf("ERRO LISTEN"); //DEBUG
 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
 		exit(1);
 	}
+
+	// lidando com processos zumbis
+	// http://www.microhowto.info/howto/reap_zombie_processes_using_a_sigchld_handler.html
+	if(forkOrThread == FORK){
+		struct sigaction sa;
+		sa.sa_handler = &handleSIGCHLD;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+		if (sigaction(SIGCHLD, &sa, 0) == -1) {
+	  	perror(0);
+	  	exit(1);
+		}
+	}
+
+
 	if(forkOrThread == FORK){
 		forkExecution(sockfd);
 	}
@@ -83,6 +97,14 @@ int main(int argc, char** argv) {
 	}
 
 	return 0;
+}
+
+// http://www.microhowto.info/howto/reap_zombie_processes_using_a_sigchld_handler.html
+void handleSIGCHLD(int signal) {
+  int saved_errno = errno;
+	// WNOHANG garante que o handler não será bloqueante
+  while (waitpid((pid_t)(-1), 0, WNOHANG) > 0) {}
+  errno = saved_errno;
 }
 
 void sendFile(char *filePath, int sockfd){
@@ -274,14 +296,13 @@ void forkExecution(int sockfd){
 			return;
 
 		} else {
-			//Parent ou Child?
 			close(connfd);
 		}
 	}
 	close(sockfd);
 }
 
-void threadExecution(int sockfd, int n){ // receber N threads
+void threadExecution(int sockfd, int n){
 	struct sockaddr_in client;
   int clilen;
   pthread_t tids[n];
@@ -303,8 +324,6 @@ void threadExecution(int sockfd, int n){ // receber N threads
 	}
 
 	sem_destroy(&mutex);
-
-	// semaforo va para vermelho > usa accept > semaforo va para verde
 	return;
 }
 
