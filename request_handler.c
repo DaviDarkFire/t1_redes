@@ -1,29 +1,30 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#define SECONDSPACEPOS 11
+#define SECONDSPACEPOS 11 //11: navegador, 10: terminal
+#define THISSHOULDBEHTTPINDEX 10
 
 int checkRequestLine(char * requestLine){
 	if(strncmp("GET", requestLine, 3) == 0){
-		printf("1\n");
+		// printf("1\n");
 
 		if (requestLine[3] == ' '){
-			printf("2\n");
-			printf("Pos: %c////////\n", requestLine[strlen(requestLine)-SECONDSPACEPOS]);
+			// printf("2\n");
+			// printf("Pos: %c////////\n", requestLine[strlen(requestLine)-SECONDSPACEPOS]);
 			if(requestLine[strlen(requestLine)-SECONDSPACEPOS] == ' '){ //pode variar o valor do -10
 
-				printf("3\n");
+				// printf("3\n");
 
 				int i;
-				char thisShouldBeHTTP[8];
-				for(i = 1; i <= 8; i++){
+				char thisShouldBeHTTP[THISSHOULDBEHTTPINDEX];
+				for(i = 1; i <= THISSHOULDBEHTTPINDEX; i++){
 					int j = strlen(requestLine) - SECONDSPACEPOS + i;
 					thisShouldBeHTTP[i-1] = requestLine[j];
 				}
-				thisShouldBeHTTP[8] = '\0';
+				thisShouldBeHTTP[THISSHOULDBEHTTPINDEX] = '\0';
 
-				if(strcmp("HTTP/1.1", thisShouldBeHTTP) == 0){
-					printf("4\n");
+				if(strcmp("HTTP/1.1\r\n", thisShouldBeHTTP) == 0){
+					// printf("4\n");
 
 
 					int nofspaces = 0;
@@ -35,7 +36,7 @@ int checkRequestLine(char * requestLine){
 
 
 					if(nofspaces == 2){
-						printf("5\n");
+						// printf("5\n");
 
 						return 1;
 					}
@@ -75,15 +76,3 @@ char* getRequestLine(char* buffer){
     requestLine[reqLen] = '\0';
     return requestLine;
 }
-
-// int main(int argc, char** argv){
-// 	int r;
-
-// 	// char* requestLine = getRequestLine("HTTP/1.1 <sp> 200 <sp> Document <sp> follows <crlf>\nServer: <sp> <Server-Type> <crlf>\nContent-type: <sp> <Document-Type> <crlf>\n{Outras informa¸c~oes de cabe¸calho}*\n<crlf>\n<Dados do Documento>");
-// 	char* requestLine = getRequestLine("HTTP/1.1 <sp> 200 <sp> Document <sp> follows <crlf>\nServer: <sp> <Server-Type> <crlf>\nContent-type: <sp> <Document-Type> <crlf>\n{Outras informa¸c~oes de cabe¸calho}*\n<crlf>\n<Dados do Documento>");
-// 	printf("Request Line: %s\n", requestLine);
-
-
-// 	return 0;
-
-// }
