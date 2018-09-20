@@ -14,6 +14,7 @@
 #include "request_handler.c"
 #include <semaphore.h>
 #include <dirent.h>
+#include "cgi_bin.c"
 
 #define LISTEN_ENQ 5
 #define FORKORTHREAD 1
@@ -381,10 +382,29 @@ void serverRespond(int connfd){
 		}
 		
 		core = treatPath(core);
+
+
+		if(isCGIBIN(core)){
+			loadQueryString(core);
+			char* scriptName = getScriptName(core);
+			char scriptPath[8+strlen(scriptName)];
+
+			strcpy(scriptPath, "cgi-bin/");
+			strcat(scriptPath, scriptName);
+			printf("scriptPath: %s\n", scriptPath);
+			if(execv(scriptPath, NULL) < 0) { 
+				fprintf(stderr, "ERROR: %s\n", strerror(errno));
+				exit(1);
+			}
+			return;
+		}else{
+			printf("Não é CGI\n");//DEBUG
+		}
+
+
 		// printf("CHEGUEI IF OPENDIR\n");//DEBUG
 		printf("CORE: %s\n", core); //DEBUG
 		if(opendir(core) != NULL){
-			// printf("ENTROU IF OPENDIR\n");//DEBUG
 			sendDirectory(connfd, core);
 			return;
 

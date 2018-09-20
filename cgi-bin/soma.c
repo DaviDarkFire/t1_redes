@@ -1,24 +1,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+//a=0&b=2
 
+int getNumber(char* params, char c1, char c2){
+	char *start = strchr(params, c1) + 2;
+    char *end = strchr(params, c2) - 1;
+    int len = end-start+1;
+    char nl[len];
+    strncpy(nl, start, len);
+    return atoi(nl);
+}
 void getParameters(int* a, int* b, char* parameters){
-	char* beginPos, endPos;
-	int len;
-
-	char* beginPos = strchr(parameters, 'a') + 2;
-	char* endPos = strchr(parameters, 'b') - 1;
-	len = strlen(endPos) - strlen(beginPos) + 1;
-	printf("LEN: %d\n", len);
-	char number[len];
-	// strncpy(number, beginPos, len);
-	// a = atoi(number);
-
-	// beginPos = strchr(parameters, 'b');
-	// endPos = strlen(parameters)-1;
-	// len = atoi(endPos) - atoi(beginPos) +1;
-	// strncpy(number, *beginPos, len);
-	// b = atoi(number);
+	*a = getNumber(parameters, 'a','&');
+	*b = getNumber(parameters, 'b','\0');
 }
 
 int main(int argc, char* argv[], char* arge[]){
@@ -27,9 +22,13 @@ int main(int argc, char* argv[], char* arge[]){
 	// 		break;
 	// }
 
+	char* params = getenv("QUERY_STRING");
+
 	int a, b;
-	// char* parameters = arge[i];
-	char parameters[] = "a=10b=20";
-	getParameters(&a, &b, parameters);
-	printf("resultado: %d", a+b);
+
+	getParameters(&a, &b, params);
+	printf("a, b: %d%d\n", a,b);
+	// // char* parameters = arge[i];
+	// char parameters[] = "a=10b=20";
+	// getParameters(&a, &b, parameters);
 }
