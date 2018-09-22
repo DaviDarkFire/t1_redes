@@ -147,10 +147,10 @@ char* treatPath(char* path){
 
     if(path[0] == '/'){
     	return path+1;
-		
+
 	}
 	return path;
-    
+
 }
 
 int checkFileExistence(char* filePath){
@@ -368,7 +368,7 @@ void serverRespond(int connfd){
 
 	char* requestLine = getRequestLine(buffer);
 
-	printf("REQUESTLINE: %s, penultimo char: %d, último char:%d\n", requestLine,requestLine[strlen(requestLine)-2],requestLine[strlen(requestLine)-1]); //DEBUG
+	// printf("REQUESTLINE: %s, penultimo char: %d, último char:%d\n", requestLine,requestLine[strlen(requestLine)-2],requestLine[strlen(requestLine)-1]); //DEBUG
 	// printf("TAMANHO REQUEST LINE: %d\n", (int) strlen(requestLine)); //DEBUG
 	reqLineIsOK = checkRequestLine(requestLine);
 
@@ -380,7 +380,7 @@ void serverRespond(int connfd){
 		if(strcmp(core, "/") == 0){ // tratando caso / => index
 			strcpy(core, "docs/index.html");
 		}
-		
+
 		core = treatPath(core);
 
 
@@ -391,8 +391,12 @@ void serverRespond(int connfd){
 
 			strcpy(scriptPath, "cgi-bin/");
 			strcat(scriptPath, scriptName);
-			printf("scriptPath: %s\n", scriptPath);
-			if(execv(scriptPath, NULL) < 0) { 
+			// printf("scriptPath: %s\n", scriptPath); //DEBUG
+
+			dup2(connfd, STDOUT_FILENO);
+			dup2(connfd, STDERR_FILENO);
+			close(connfd);
+			if(execv(scriptPath, NULL) < 0) {
 				fprintf(stderr, "ERROR: %s\n", strerror(errno));
 				exit(1);
 			}
@@ -451,12 +455,12 @@ void sendDirectory(int connfd, char* dirPath){
 	fprintf(dirResponse, "\r\n");
 	fprintf(dirResponse, "<body>");
 	fprintf(dirResponse, "\r\n");
-	
-	
-	
+
+
+
 	if ((dir = opendir (dirPath)) != NULL) {
 		// printf("if 1 sendDirectory\n"); //DEBUG
-  	
+
   		while ((ent = readdir (dir)) != NULL) {
   			// printf("while sendDirectory\n"); //DEBUG
 
@@ -471,7 +475,7 @@ void sendDirectory(int connfd, char* dirPath){
   					strcat(href,"/");
 
   				}else{
-  					strcat(href, ent->d_name);	
+  					strcat(href, ent->d_name);
   				}
   				// strcat(href, dirPath);
   				// strcat(href, "/");
@@ -480,23 +484,22 @@ void sendDirectory(int connfd, char* dirPath){
   				strcat(href, ent->d_name);
   				strcat(href, "</a>");
   				strcat(href, "\0");
-  				printf("href: %s\n", href); //DEBUG
+  				// printf("href: %s\n", href); //DEBUG
 
-
-  				fprintf(dirResponse, href);
-  				fprintf(dirResponse, "<br>"); 
+  				fprintf(dirResponse,"%s", href);
+  				fprintf(dirResponse, "<br>");
   			}
   		}
-  		
+
   		fprintf(dirResponse,"</body>");
   		fprintf(dirResponse,"\r\n");
-		fprintf(dirResponse,"</html>");
-		fprintf(dirResponse,"\0");
+			fprintf(dirResponse,"</html>");
+			fprintf(dirResponse,"\0");
 
   		closedir (dir);
   		fclose(dirResponse);
   		sendResponseHeader(1, 1, "listDir.html", connfd);
   		sendFile("listDir.html", connfd);
-	} 
+	}
 
 }
