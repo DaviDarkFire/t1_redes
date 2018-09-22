@@ -43,9 +43,7 @@ int checkRequestLine(char * requestLine){
 						return 1;
 					}
 				}
-
 			}
-
 		}
 	}
 	return 0;

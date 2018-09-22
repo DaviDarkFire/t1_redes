@@ -24,12 +24,15 @@
 #define THREAD 1
 #define BUFFSIZE 1024
 #define NTHREADS 2
+#define BADREQUESTCASE 0
+#define OKCASE 1
+#define NOTFOUNDCASE 2
 
 sem_t mutex;
 
 void sendFile(char * filePath, int sockfd);
 int checkFileExistence(char* filePath);
-void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd);
+void sendResponseHeader(int responseCase, char* core, int sockfd, int connection);
 char * getDocType(char *filePath);
 char* getContentLen(char* filePath);
 int createSocket(int port);
@@ -41,7 +44,7 @@ void handleSIGCHLD(int signal);
 void sendDirectory(int connfd, char* dirPath);
 char* treatPath(char* path);
 void sendRedirectPage(int connfd, char* dirPath);
-//TODO: TA FUNFANDO ATÉ AQUI
+
 int main(int argc, char** argv) {
 
 
@@ -177,7 +180,7 @@ int checkFileExistence(char* filePath){
     return 0;
 }
 
-void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd){
+void sendResponseHeader(int responseCase, char* core, int sockfd, int connection){
 	// Dados de Date:
 	char date[29];
   	time_t now = time(0);
@@ -185,15 +188,15 @@ void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd)
   	strftime(date, sizeof(date), "%a, %d %b %Y %H:%M:%S %Z", &tm);
 		char responseHeader[BUFFSIZE];
 
-	if(!reqLineIsOK){
+	if(responseCase == BADREQUESTCASE){
 		//printf("req line is not ok\n");//DEBUG
 		strcpy(responseHeader, "HTTP/1.1 400 Bad Request");
 	}
 	else {
-		if(fileExists){
+		if(responseCase == OKCASE){
 			strcpy(responseHeader, "HTTP/1.1 200 OK");
 		}
-		else{
+		else{ // responseCase == NOTFOUNDCASE
 			strcpy(responseHeader, "HTTP/1.1 404 Page Not Found");
 		}
 	}
@@ -208,7 +211,11 @@ void sendResponseHeader(int reqLineIsOK, int fileExists, char* core, int sockfd)
 	strcat(responseHeader, "\r\n");
 	strcat(responseHeader, "Content-Type: ");
 	strcat(responseHeader, getDocType(core));
-	//printf("GET DOCTYPE: %s\n", getDocType(core)); //DEBUG
+	strcat(responseHeader, "\r\n");
+	if(connection == KEEPALIVECONN)
+		strcat(responseHeader, "Connection: keep-alive");
+	else
+		strcat(responseHeader, "Connection: close");
 	strcat(responseHeader, "\r\n");
 	strcat(responseHeader, "\r\n\0");
 	// printf("RESPONSE HEADER: %s\n", responseHeader); //DEBUG
@@ -392,7 +399,7 @@ void serverRespond(int connfd){
 		reqLineIsOK = checkRequestLine(requestLine);
 
 		if(!reqLineIsOK){ // bad request
-			sendResponseHeader(reqLineIsOK, 0, "docs/badrequest.html", connfd);
+			sendResponseHeader(BADREQUESTCASE, "docs/badrequest.html", connfd, CLOSECONN);
 			sendFile("docs/badrequest.html", connfd); //
 		}else{ // A request está em formato esperado
 			char* core = getCore(requestLine);
@@ -424,7 +431,7 @@ void serverRespond(int connfd){
 
 					if(core[strlen(core)-1] != '/'){
 						sendRedirectPage(connfd, core);
-						// return; // talvez esse return tenha que ficar aqui
+						// return; // TODO: talvez esse return tenha que ficar aqui
 					}
 					sendDirectory(connfd, core);
 					printf("PASSOU DO sendDirectory\n");//DEBUG
@@ -432,11 +439,11 @@ void serverRespond(int connfd){
 					fileExists = checkFileExistence(core);
 					// printf("fileExists: %d\n", fileExists); // DEBUG
 					if(fileExists){ // caso ok, enviar arquivo
-						sendResponseHeader(reqLineIsOK, fileExists, core, connfd);
+						sendResponseHeader(OKCASE, core, connfd, connection);
 						sendFile(core, connfd);
 					}
 					else{ // caso contrário, not found
-						sendResponseHeader(reqLineIsOK, fileExists, "docs/notfound.html", connfd);
+						sendResponseHeader(NOTFOUNDCASE, "docs/notfound.html", connfd, CLOSECONN);
 						sendFile("docs/notfound.html", connfd);
 					}
 				}
@@ -516,7 +523,7 @@ void sendDirectory(int connfd, char* dirPath){
 
   		closedir (dir);
   		fclose(dirResponse);
-  		sendResponseHeader(1, 1, "listDir.html", connfd);
+  		sendResponseHeader(OKCASE, "listDir.html", connfd, KEEPALIVECONN);
   		sendFile("listDir.html", connfd);
 	}
 
@@ -548,6 +555,6 @@ void sendRedirectPage(int connfd, char* dirPath){
 	fprintf(redirectionPage, "</html>");
 	fprintf(redirectionPage,"\0");
 	fclose(redirectionPage);
-	sendResponseHeader(1, 1, "redirect_page.html", connfd);
+	sendResponseHeader(OKCASE, "redirect_page.html", connfd, KEEPALIVECONN);
 	sendFile("redirect_page.html", connfd);
 }
