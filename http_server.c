@@ -40,6 +40,7 @@ static void *threadRoutine(void *arg);
 void handleSIGCHLD(int signal);
 void sendDirectory(int connfd, char* dirPath);
 char* treatPath(char* path);
+void sendRedirectPage(int connfd, char* dirPath);
 //TODO: TA FUNFANDO ATÉ AQUI
 int main(int argc, char** argv) {
 
@@ -401,11 +402,16 @@ void serverRespond(int connfd){
 			printf("Não é CGI\n");//DEBUG
 		}
 
-
-		// printf("CHEGUEI IF OPENDIR\n");//DEBUG
-		printf("CORE: %s\n", core); //DEBUG
 		if(opendir(core) != NULL){
+
+			if(core[strlen(core)-1] != '/'){
+				
+				sendRedirectPage(connfd, core);
+				return;
+			}
+
 			sendDirectory(connfd, core);
+			printf("PASSOU DO sendDirectory\n");//DEBUG
 			return;
 
 		}
@@ -499,4 +505,34 @@ void sendDirectory(int connfd, char* dirPath){
   		sendFile("listDir.html", connfd);
 	} 
 
+}
+
+void sendRedirectPage(int connfd, char* dirPath){
+	FILE* redirectionPage = fopen("redirect_page.html", "w");
+	char red_link[strlen(dirPath)+1];
+	strcpy(red_link,dirPath);
+	strcat(red_link,"/");
+	fprintf(redirectionPage, "<!DOCTYPE html>");
+	fprintf(redirectionPage, "\r\n");
+	fprintf(redirectionPage, "<html>");
+	fprintf(redirectionPage, "\r\n");
+	fprintf(redirectionPage, "<head>");
+	fprintf(redirectionPage, "\r\n");
+	fprintf(redirectionPage, "<meta charset=\"UTF-8\">");
+	fprintf(redirectionPage, "\r\n");
+	fprintf(redirectionPage, "<meta http-equiv=\"refresh\" content=\"0;/");
+	fprintf(redirectionPage, red_link);
+	fprintf(redirectionPage, "\" />");
+	fprintf(redirectionPage, "\r\n");
+	fprintf(redirectionPage, "</head>");
+	fprintf(redirectionPage, "\r\n");
+	fprintf(redirectionPage, "<body>");
+	fprintf(redirectionPage, "\r\n");
+	fprintf(redirectionPage, "</body>");
+	fprintf(redirectionPage, "\r\n");
+	fprintf(redirectionPage, "</html>");
+	fprintf(redirectionPage,"\0");
+	fclose(redirectionPage);
+	sendResponseHeader(1, 1, "redirect_page.html", connfd);
+	sendFile("redirect_page.html", connfd);
 }
