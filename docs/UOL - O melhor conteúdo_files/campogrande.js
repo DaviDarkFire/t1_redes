@@ -1,0 +1,1 @@
+Weather.callback(["MS","Campo Grande",23,29,"PC","CampoGrande-MS"]);

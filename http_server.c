@@ -112,36 +112,48 @@ void handleSIGCHLD(int signal) {
   errno = saved_errno;
 }
 
+// void sendFile(char *filePath, int sockfd){
+// 	FILE *fileToBeSent;
+// 	long size;
+// 	char *sender;
+//
+// 	fileToBeSent = fopen(filePath, "rb");
+// 	if(fileToBeSent){
+// 		fseek(fileToBeSent, 0, SEEK_END); // coloca indicador no fim do arquivo
+// 		size = ftell(fileToBeSent); // pega o tamanho usando o indicador
+// 		rewind(fileToBeSent); // volta indicador ao início
+// 		sender = (char *) malloc(sizeof(char) * size); // alloca espaço para mandar todo o arquivo
+// 		fread(sender, 1, size, fileToBeSent); // armazena em sender o arquivo
+// 		// printf("Dados do sender: %s", sender);
+// 		int i = send(sockfd, sender, size, 0); // manda ao socket os dados que armazenamos em sender
+// 		//printf("i: %d\n", i);//DEBUG
+// 		fclose(fileToBeSent);
+// 		free(sender);
+// 	}
+// }
+
 void sendFile(char *filePath, int sockfd){
 	FILE *fileToBeSent;
-	long size;
-	char *sender;
+	char buffer[BUFFSIZE];
+	int bytesRead, bytesSent;
+	int fd = open(filePath, O_RDONLY);
 
-	if(strcmp(filePath, "/") == 0){
-
-		fileToBeSent = fopen("docs/index.html", "rb");
-
-	}else{
-		if(filePath[0] == '/'){
-			fileToBeSent = fopen(filePath+1, "rb");
-		}else{
-			fileToBeSent = fopen(filePath, "rb");
-
+	while(1){
+		memset(buffer, 0, sizeof(buffer));
+		bytesRead = read(fd, buffer, sizeof(buffer));
+		if(bytesRead < 0){
+			fprintf(stderr, "ERROR: %s\n", strerror(errno));
+			exit(1);
+		} else if(bytesRead == 0){
+			close(fd);
+			break;
+		} else {
+			bytesSent = send(sockfd, buffer, bytesRead, 0);
+			while(bytesSent < bytesRead){
+				bytesSent += send(sockfd, buffer + bytesSent, bytesRead - bytesSent, 0);
+			}
 		}
 	}
-	if(fileToBeSent){
-		fseek(fileToBeSent, 0, SEEK_END); // coloca indicador no fim do arquivo
-		size = ftell(fileToBeSent); // pega o tamanho usando o indicador
-		rewind(fileToBeSent); // volta indicador ao início
-		sender = (char *) malloc(sizeof(char) * size); // alloca espaço para mandar todo o arquivo
-		fread(sender, 1, size, fileToBeSent); // armazena em sender o arquivo
-		// printf("Dados do sender: %s", sender);
-		int i = send(sockfd, sender, size, 0); // manda ao socket os dados que armazenamos em sender
-		//printf("i: %d\n", i);//DEBUG
-		fclose(fileToBeSent);
-		free(sender);
-	}
-
 }
 
 char* treatPath(char* path){
@@ -409,7 +421,7 @@ void serverRespond(int connfd){
 		if(opendir(core) != NULL){
 
 			if(core[strlen(core)-1] != '/'){
-				
+
 				sendRedirectPage(connfd, core);
 				return;
 			}
