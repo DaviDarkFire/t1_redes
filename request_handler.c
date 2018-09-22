@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #define SECONDSPACEPOS 11 //11: navegador, 10: terminal
 #define THISSHOULDBEHTTPINDEX 10
+#define KEEPALIVECONN 1
+#define CLOSEDCONN 2
 
 int checkRequestLine(char * requestLine){
 	if(strncmp("GET", requestLine, 3) == 0){
@@ -75,4 +77,13 @@ char* getRequestLine(char* buffer){
     int reqLen = endOfRequestLine - startOfRequestLine+1;
     requestLine[reqLen] = '\0';
     return requestLine;
+}
+
+int checkConnection(char* header){
+	char* start;
+	start = strstr(header, "Connection: ");
+	if(start == NULL) return -1;
+	start = start + 12;
+	if (strncmp(start, "keep-alive", 10) == 0) return KEEPALIVECONN;
+	else return CLOSEDCONN;
 }

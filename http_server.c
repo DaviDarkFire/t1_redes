@@ -379,6 +379,10 @@ void serverRespond(int connfd){
 
 	printf("Request recebida abaixo:\n%s\n", buffer); //DEBUG
 
+	// Tratar connection aqui
+	int connection = checkConnection(buffer); // DEBUG
+	printf("conn: %d\n", connection); // DEBUG
+
 	char* requestLine = getRequestLine(buffer);
 
 	// printf("REQUESTLINE: %s, penultimo char: %d, último char:%d\n", requestLine,requestLine[strlen(requestLine)-2],requestLine[strlen(requestLine)-1]); //DEBUG
