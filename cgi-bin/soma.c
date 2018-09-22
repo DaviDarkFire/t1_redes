@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-//a=0&b=2
+#include <unistd.h>
+
+#define CONNFDINDEX 1
 
 int getNumber(char* params, char c1, char c2){
 	char *start = strchr(params, c1) + 2;
@@ -17,18 +19,22 @@ void getParameters(int* a, int* b, char* parameters){
 }
 
 int main(int argc, char* argv[], char* arge[]){
-	// for (int i = 0; i <= 20; i++){
-	// 	if(strncmp(arge[i], "QUERY_STRING=", 13) == 0
-	// 		break;
-	// }
-
 	char* params = getenv("QUERY_STRING");
 
 	int a, b;
 
 	getParameters(&a, &b, params);
-	printf("a, b: %d%d\n", a,b);
-	// // char* parameters = arge[i];
-	// char parameters[] = "a=10b=20";
-	// getParameters(&a, &b, parameters);
+
+	printf("HTTP/1.1 200 OK\r\n");
+	printf("Server: FACOMRC-2018/1.0\r\n");
+	printf("Content-Length: %d\r\n", 148+2);
+	printf("Content-type: text/html\r\n\r\n");
+	printf("<!DOCTYPE html>\r\n");
+	printf("<html>\r\n");
+	printf("<head>\r\n<meta charset=\"UTF-8\">\r\n<title>Resultado da soma</title>\r\n</head>\r\n");
+	printf("<body>\r\n");
+	printf("a+b = %d\r\n", a+b);
+	printf("</body></html>");
+
+	return 1;
 }
