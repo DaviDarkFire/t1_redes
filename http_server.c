@@ -364,90 +364,86 @@ static void *threadRoutine(void *arg){
 }
 
 void serverRespond(int connfd){
-	char buffer[256];
+	char buffer[BUFFSIZE];
 	int n;
 	int reqLineIsOK, fileExists;
 	DIR* dir;
+	int connection;
 
-	memset(buffer, 0, sizeof(buffer));
+	do{
+		memset(buffer, 0, sizeof(buffer));
 
-	if(n = recv(connfd, buffer, sizeof(buffer), 0) < 0) {
-		fprintf(stderr, "ERROR: %s\n", strerror(errno));
-		// printf("if3\n"); // DEBUG
-		exit(1);
-	}
-
-	printf("Request recebida abaixo:\n%s\n", buffer); //DEBUG
-
-	// Tratar connection aqui
-	int connection = checkConnection(buffer); // DEBUG
-	printf("conn: %d\n", connection); // DEBUG
-
-	char* requestLine = getRequestLine(buffer);
-
-	// printf("REQUESTLINE: %s, penultimo char: %d, último char:%d\n", requestLine,requestLine[strlen(requestLine)-2],requestLine[strlen(requestLine)-1]); //DEBUG
-	// printf("TAMANHO REQUEST LINE: %d\n", (int) strlen(requestLine)); //DEBUG
-	reqLineIsOK = checkRequestLine(requestLine);
-
-	if(!reqLineIsOK){ // bad request
-		sendResponseHeader(reqLineIsOK, 0, "docs/badrequest.html", connfd);
-		sendFile("docs/badrequest.html", connfd); //
-	}else{ // A request está em formato esperado
-		char* core = getCore(requestLine);
-		if(strcmp(core, "/") == 0){ // tratando caso / => index
-			strcpy(core, "docs/index.html");
+		if(n = recv(connfd, buffer, sizeof(buffer), 0) < 0) {
+			fprintf(stderr, "ERROR: %s\n", strerror(errno));
+			// printf("if3\n"); // DEBUG
+			exit(1);
 		}
 
-		core = treatPath(core);
+		printf("Request recebida abaixo:\n%s\n", buffer); //DEBUG
 
+		// Tratar connection aqui
+		connection = checkConnection(buffer); // DEBUG
+		printf("conn: %d\n", connection); // DEBUG
 
-		if(isCGIBIN(core)){
-			loadQueryString(core);
-			char* scriptName = getScriptName(core);
-			char scriptPath[8+strlen(scriptName)];
+		char* requestLine = getRequestLine(buffer);
 
-			strcpy(scriptPath, "cgi-bin/");
-			strcat(scriptPath, scriptName);
-			// printf("scriptPath: %s\n", scriptPath); //DEBUG
+		// printf("REQUESTLINE: %s, penultimo char: %d, último char:%d\n", requestLine,requestLine[strlen(requestLine)-2],requestLine[strlen(requestLine)-1]); //DEBUG
+		// printf("TAMANHO REQUEST LINE: %d\n", (int) strlen(requestLine)); //DEBUG
+		reqLineIsOK = checkRequestLine(requestLine);
 
-			dup2(connfd, STDOUT_FILENO);
-			dup2(connfd, STDERR_FILENO);
-			close(connfd);
-			if(execv(scriptPath, NULL) < 0) {
-				fprintf(stderr, "ERROR: %s\n", strerror(errno));
-				exit(1);
-			}
-			return;
-		}else{
-			printf("Não é CGI\n");//DEBUG
-		}
-
-		if(opendir(core) != NULL){
-
-			if(core[strlen(core)-1] != '/'){
-
-				sendRedirectPage(connfd, core);
-				return;
+		if(!reqLineIsOK){ // bad request
+			sendResponseHeader(reqLineIsOK, 0, "docs/badrequest.html", connfd);
+			sendFile("docs/badrequest.html", connfd); //
+		}else{ // A request está em formato esperado
+			char* core = getCore(requestLine);
+			if(strcmp(core, "/") == 0){ // tratando caso / => index
+				strcpy(core, "docs/index.html");
 			}
 
-			sendDirectory(connfd, core);
-			printf("PASSOU DO sendDirectory\n");//DEBUG
-			return;
+			core = treatPath(core);
 
-		}
+			// caso cgi-bin
+			if(isCGIBIN(core)){
+				loadQueryString(core);
+				char* scriptName = getScriptName(core);
+				char scriptPath[8+strlen(scriptName)];
 
+				strcpy(scriptPath, "cgi-bin/");
+				strcat(scriptPath, scriptName);
+				// printf("scriptPath: %s\n", scriptPath); //DEBUG
 
-		fileExists = checkFileExistence(core);
-		// printf("fileExists: %d\n", fileExists); // DEBUG
-		if(fileExists){ // caso ok, enviar arquivo
-			sendResponseHeader(reqLineIsOK, fileExists, core, connfd);
-			sendFile(core, connfd);
+				dup2(connfd, STDOUT_FILENO);
+				dup2(connfd, STDERR_FILENO);
+				close(connfd);
+				if(execv(scriptPath, NULL) < 0) {
+					fprintf(stderr, "ERROR: %s\n", strerror(errno));
+					exit(1);
+				}
+			} else { // caso navegacao de diretorio
+				if(opendir(core) != NULL){
+
+					if(core[strlen(core)-1] != '/'){
+						sendRedirectPage(connfd, core);
+						// return; // talvez esse return tenha que ficar aqui
+					}
+					sendDirectory(connfd, core);
+					printf("PASSOU DO sendDirectory\n");//DEBUG
+				} else { // caso requisicao de arquivo
+					fileExists = checkFileExistence(core);
+					// printf("fileExists: %d\n", fileExists); // DEBUG
+					if(fileExists){ // caso ok, enviar arquivo
+						sendResponseHeader(reqLineIsOK, fileExists, core, connfd);
+						sendFile(core, connfd);
+					}
+					else{ // caso contrário, not found
+						sendResponseHeader(reqLineIsOK, fileExists, "docs/notfound.html", connfd);
+						sendFile("docs/notfound.html", connfd);
+					}
+				}
+			}
 		}
-		else{ // caso contrário, not found
-			sendResponseHeader(reqLineIsOK, fileExists, "docs/notfound.html", connfd);
-			sendFile("docs/notfound.html", connfd);
-		}
-	}
+	} while(connection == KEEPALIVECONN);
+
 }
 
 
