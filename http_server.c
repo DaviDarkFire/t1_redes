@@ -76,7 +76,6 @@ int main(int argc, char** argv) {
 	sockfd = createSocket(port);
 
 	if(listen(sockfd, LISTEN_ENQ) < 0) { //escuta requisições ao server
-		//printf("ERRO LISTEN"); //DEBUG
 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
 		exit(1);
 	}
@@ -169,7 +168,6 @@ void sendResponseHeader(int responseCase, char* core, int sockfd, int connection
 	char responseHeader[BUFFSIZE];
 
 	if(responseCase == BADREQUESTCASE){
-		//printf("req line is not ok\n");//DEBUG
 		strcpy(responseHeader, "HTTP/1.1 400 Bad Request");
 	}
 	else {
@@ -198,7 +196,6 @@ void sendResponseHeader(int responseCase, char* core, int sockfd, int connection
 		strcat(responseHeader, "Connection: close");
 	strcat(responseHeader, "\r\n");
 	strcat(responseHeader, "\r\n\0");
-	// printf("RESPONSE HEADER: %s\n", responseHeader); //DEBUG
 	send(sockfd, responseHeader, strlen(responseHeader), 0);
 }
 
@@ -227,27 +224,22 @@ char * getDocType(char *filePath){
 }
 
 char* getContentLen(char* filePath){
-	// printf("entrou na content len\n");//DEBUG
 	FILE *file;
 	long size;
 
 	if(filePath[0] == '/'){
-		// printf("tem barra\n");//DEBUG
 		file = fopen(filePath+1, "rb");
 	}else{
-		// printf("Não tem barra\n");//DEBUG
 		file = fopen(filePath, "rb");
 	}
 	fseek(file, 0, SEEK_END); // coloca indicador no fim do arquivo
 	size = ftell(file); // pega o tamanho usando o indicador
 	char* str = malloc(sizeof(char)*10);
 	sprintf(str, "%d", (int) size);
-	printf("STR: %s\n", str);//DEBUG
 	return str;
-
 }
 
-int createSocket(int port){ // passar argv[PORT]
+int createSocket(int port){
 
 	int sockfd; //file descriptor do server
 	struct sockaddr_in serv_addr; //esctrutura do server
@@ -268,12 +260,10 @@ int createSocket(int port){ // passar argv[PORT]
 		fprintf(stderr, "ERROR: %s\n", strerror(errno));
 		exit(1);
 	}
-	// printf("sockfd on create socket %d\n", sockfd); //DEBUG
 	return sockfd;
 }
 
 void forkExecution(int sockfd){
-	// printf("entrou na connection with fork\n"); // DEBUG
 	socklen_t clilen; //tamnho do cliente
 	struct sockaddr_in cli_addr; //estrutura do cliente
 	pid_t pid; //id do processo
@@ -284,19 +274,15 @@ void forkExecution(int sockfd){
 
 	while(1) { //loop d conexão
 		memset((char*) &cli_addr, 0, sizeof(cli_addr)); //zera o serv_addr
-		// printf("sockfd: %d\n", sockfd); //DEBUG
 		connfd = accept(sockfd, (struct sockaddr*) &cli_addr, (unsigned int*) &clilen);//tenta nova conexão
-		// printf("connfd: %d\n", connfd); //DEBUG
 		if(connfd < 0) { //verifica erro
 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
-			// printf("if1\n"); // DEBUG
 			exit(1);
 		}
 
 		pid = fork(); //cria um novo processo
 		if(pid < 0) { //erro no fork?
 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
-			// printf("if2\n"); // DEBUG
 			exit(1);
 		}
 
@@ -353,7 +339,7 @@ void serverRespond(int connfd){
 	int reqLineIsOK, fileExists;
 	int connection;
 
-	do{ 
+	do{
 		memset(buffer, 0, sizeof(buffer));
 		// do{ //esse laço serve para telnet
 		// 	n += recv(connfd, buffer+n, BUFFSIZE-n, 0);
@@ -361,7 +347,6 @@ void serverRespond(int connfd){
 		n = recv(connfd, buffer, BUFFSIZE, 0); //serve para navegador
 		if(n < 0) {
 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
-			// printf("if3\n"); // DEBUG
 			exit(1);
 		}
 
@@ -369,12 +354,9 @@ void serverRespond(int connfd){
 
 		// Tratar connection aqui
 		connection = checkConnection(buffer);
-		printf("conn: %d\n", connection); // DEBUG
 
 		char* requestLine = getRequestLine(buffer);
 
-		// printf("REQUESTLINE: %s, penultimo char: %d, último char:%d\n", requestLine,requestLine[strlen(requestLine)-2],requestLine[strlen(requestLine)-1]); //DEBUG
-		// printf("TAMANHO REQUEST LINE: %d\n", (int) strlen(requestLine)); //DEBUG
 		reqLineIsOK = checkRequestLine(requestLine);
 
 		if(!reqLineIsOK){ // bad request
@@ -397,7 +379,6 @@ void serverRespond(int connfd){
 
 				strcpy(scriptPath, "cgi-bin/");
 				strcat(scriptPath, scriptName);
-				// printf("scriptPath: %s\n", scriptPath); //DEBUG
 
 				dup2(connfd, STDOUT_FILENO);
 				dup2(connfd, STDERR_FILENO);
@@ -415,11 +396,9 @@ void serverRespond(int connfd){
 						sendRedirectPage(connfd, core);
 					}
 						sendDirectory(connfd, core);
-						printf("PASSOU DO sendDirectory\n");//DEBUG	
-					
+
 				} else { // caso requisicao de arquivo
 					fileExists = checkFileExistence(core);
-					// printf("fileExists: %d\n", fileExists); // DEBUG
 					if(fileExists){ // caso ok, enviar arquivo
 						sendResponseHeader(OKCASE, core, connfd, connection);
 						sendFile(core, connfd);
@@ -438,14 +417,6 @@ void serverRespond(int connfd){
 
 
 void sendDirectory(int connfd, char* dirPath){
-
-	// if(dirPath[strlen(dirPath)-1] != '/'){
-
-	// 	strcat(dirPath, "/");
-	// }
-
-	printf("DIRPATH: %s\n", dirPath);
-
 	DIR *dir;
 	struct dirent *ent;
 	char href[BUFFSIZE];
@@ -467,17 +438,12 @@ void sendDirectory(int connfd, char* dirPath){
 
 
 	if ((dir = opendir (dirPath)) != NULL) {
-		// printf("if 1 sendDirectory\n"); //DEBUG
 
   		while ((ent = readdir (dir)) != NULL) {
-  			// printf("while sendDirectory\n"); //DEBUG
 
   			if (strcmp(ent->d_name,".") != 0 && strcmp(ent->d_name,"..") != 0){
-  				// printf("if-while sendDirectory\n"); //DEBUG
 
   				strcpy(href, "<a href=\""); // coloquei / pra vir da raiz
-  				// strcat(href,dirPath);
-  				// strcat(href, "/");
   				if (getDocType(ent->d_name) == NULL){
   					strcat(href, ent->d_name);
   					strcat(href,"/");
@@ -485,14 +451,10 @@ void sendDirectory(int connfd, char* dirPath){
   				}else{
   					strcat(href, ent->d_name);
   				}
-  				// strcat(href, dirPath);
-  				// strcat(href, "/");
-  				// strcat(href, ent->d_name);
   				strcat(href,"\">");
   				strcat(href, ent->d_name);
   				strcat(href, "</a>");
   				strcat(href, "\0");
-  				// printf("href: %s\n", href); //DEBUG
 
   				fprintf(dirResponse,"%s", href);
   				fprintf(dirResponse, "<br>");
