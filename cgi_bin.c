@@ -8,7 +8,6 @@ int getCharIndex(char* string, char desiredChar);
 char* getScriptName(char* path);
 int isCGIBIN(char * path);
 
-
 int isCGIBIN(char * path){
   if(strncmp(path, "cgi-bin/", 8) == 0) return 1;
   return 0;
@@ -37,30 +36,3 @@ void loadQueryString(char* path){
     char* params = strchr(path, '?') + 1;
     setenv("QUERY_STRING", params, 1);
 }
-
-void getQueryString(){
-    printf("QUERY_STRING: %s\n", getenv("QUERY_STRING"));
-
-}
-
-// ta errado, ler links do telegram
-// void loadQueryString(char* path){
-//   int startOfParams;
-//   startOfParams = getCharIndex(path, '?')+1;
-//   strcpy(getenv("QUERY_STRING"), path+startOfParams);
-//   printf("Query string na loadQueryString:%s\n", getenv("QUERY_STRING"));
-// }
-
-// int main(int argc, char* argv[], char* arge[]){
-//   char pathTest[] = "/cgi-bin/soma?a=10&b=20";
-//
-//   if(isCGIBIN(pathTest)) printf("é cgi-bin\n");
-//   else printf("não é cgi-bin\n");
-//
-//   printf("posição do ?:%d\n", getCharIndex(pathTest, '?'));
-//   char* script;
-//   script = getScriptName(pathTest);
-//   printf("o nome do script é:%s\n", script);
-//   loadQueryString(pathTest);
-//   printf("O query string é:%s\n", getenv("QUERY_STRING"));
-// }

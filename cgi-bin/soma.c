@@ -5,6 +5,17 @@
 
 #define CONNFDINDEX 1
 
+int getNumberOfDigits(int number){
+  int counter, aux;
+  counter = 0;
+  aux = number;
+  while(aux != 0){
+    aux = aux/10;
+    counter++;
+  }
+  return counter;
+}
+
 int getNumber(char* params, char c1, char c2){
 	char *start = strchr(params, c1) + 2;
     char *end = strchr(params, c2) - 1;
@@ -27,14 +38,14 @@ int main(int argc, char* argv[], char* arge[]){
 
 	printf("HTTP/1.1 200 OK\r\n");
 	printf("Server: FACOMRC-2018/1.0\r\n");
-	printf("Content-Length: %d\r\n", 148+2);
+	printf("Content-Length: %d\r\n", 148+getNumberOfDigits(a+b));
 	printf("Content-type: text/html\r\n\r\n");
 	printf("<!DOCTYPE html>\r\n");
 	printf("<html>\r\n");
 	printf("<head>\r\n<meta charset=\"UTF-8\">\r\n<title>Resultado da soma</title>\r\n</head>\r\n");
 	printf("<body>\r\n");
 	printf("a+b = %d\r\n", a+b);
-	printf("</body></html>");
+	printf("</body>\r\n</html>");
 
 	return 1;
 }
