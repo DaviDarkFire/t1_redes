@@ -335,20 +335,12 @@ void forkExecution(int sockfd){
 }
 
 void threadExecution(int sockfd, int n){
-	struct sockaddr_in client;
-  int clilen;
   pthread_t tids[n];
 	int i;
-	int *iptr;
 	sem_init(&mutex, 0, 1);
 
 	for(i = 0; i < n; i++){
-		iptr = (int *) malloc(sizeof(int));
-		sem_wait(&mutex);
-		*iptr = accept(sockfd, (struct sockaddr*) &client, &clilen);
-		sem_post(&mutex);
-		pthread_create(&tids[i], NULL, (void*) &threadRoutine, iptr);
-			// dentro da função de execução: antes do accept: usar sem_wait(&mutex); e depois do accept: sem_post(&mutex);
+		pthread_create(&tids[i], NULL, (void*) &threadRoutine, &sockfd);
 	}
 
 	for(i = 0; i < n; i++){
@@ -360,14 +352,19 @@ void threadExecution(int sockfd, int n){
 }
 
 static void *threadRoutine(void *arg){
-	int connfd;
-	connfd = *((int*) arg);
-	// free(arg);
-	pthread_detach(pthread_self());
-	serverRespond(connfd);
-	close(connfd);
+	socklen_t clilen; //tamnho do cliente
+	struct sockaddr_in cli_addr; //estrutura do cliente
+	int sockfd, connfd;
 
-	return NULL;
+	clilen = sizeof(cli_addr);
+	sockfd = *((int*) arg);
+	while(1){
+		sem_wait(&mutex);
+		connfd = accept(sockfd, (struct sockaddr*) &cli_addr, (unsigned int*) &clilen);
+		sem_post(&mutex);
+		serverRespond(connfd);
+		close(connfd);
+	}
 }
 
 void serverRespond(int connfd){
