@@ -166,7 +166,7 @@ void sendResponseHeader(int responseCase, char* core, int sockfd, int connection
   	time_t now = time(0);
   	struct tm tm = *gmtime(&now);
   	strftime(date, sizeof(date), "%a, %d %b %Y %H:%M:%S %Z", &tm);
-		char responseHeader[BUFFSIZE];
+	char responseHeader[BUFFSIZE];
 
 	if(responseCase == BADREQUESTCASE){
 		//printf("req line is not ok\n");//DEBUG
@@ -242,7 +242,7 @@ char* getContentLen(char* filePath){
 	size = ftell(file); // pega o tamanho usando o indicador
 	char* str = malloc(sizeof(char)*10);
 	sprintf(str, "%d", (int) size);
-	// printf("STR: %s\n", str);//DEBUG
+	printf("STR: %s\n", str);//DEBUG
 	return str;
 
 }
@@ -353,12 +353,12 @@ void serverRespond(int connfd){
 	int reqLineIsOK, fileExists;
 	int connection;
 
-	do{
+	do{ 
 		memset(buffer, 0, sizeof(buffer));
-		do{
-			n += recv(connfd, buffer+n, BUFFSIZE-n, 0);
-		}while(strcmp(buffer+n-4,"\r\n\r\n") != 0);
-		// n = recv(connfd, buffer, BUFFSIZE, 0);
+		// do{ //esse laço serve para telnet
+		// 	n += recv(connfd, buffer+n, BUFFSIZE-n, 0);
+		// }while(strcmp(buffer+n-4,"\r\n\r\n") != 0);
+		n = recv(connfd, buffer, BUFFSIZE, 0); //serve para navegador
 		if(n < 0) {
 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
 			// printf("if3\n"); // DEBUG
@@ -382,6 +382,7 @@ void serverRespond(int connfd){
 			sendFile("docs/badrequest.html", connfd); //
 		}else{ // A request está em formato esperado
 			char* core = getCore(requestLine);
+			free(requestLine); //DEBUG
 			if(strcmp(core, "/") == 0){ // tratando caso / => index
 				strcpy(core, "docs/index.html");
 			}
@@ -401,10 +402,12 @@ void serverRespond(int connfd){
 				dup2(connfd, STDOUT_FILENO);
 				dup2(connfd, STDERR_FILENO);
 				close(connfd);
-				if(execv(scriptPath, NULL) < 0) {
-					fprintf(stderr, "ERROR: %s\n", strerror(errno));
-					exit(1);
-				}
+				char * arg[] = {NULL};
+
+                if(execv(scriptPath, arg) < 0) {
+                    fprintf(stderr, "ERROR: %s\n", strerror(errno));
+                    exit(1);
+                }
 			} else { // caso navegacao de diretorio
 				if(opendir(core) != NULL){
 
@@ -428,6 +431,7 @@ void serverRespond(int connfd){
 				}
 			}
 		}
+
 	} while(connection == KEEPALIVECONN);
 
 }
