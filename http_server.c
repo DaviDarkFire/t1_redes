@@ -39,7 +39,7 @@ int createSocket(int port);
 void forkExecution(int sockfd);
 void serverRespond(int connfd);
 void threadExecution(int sockfd, int n);
-static void *threadRoutine(void *arg);
+void* threadRoutine(void *arg);
 void handleSIGCHLD(int signal);
 void sendDirectory(int connfd, char* dirPath);
 char* treatPath(char* path);
@@ -115,28 +115,8 @@ void handleSIGCHLD(int signal) {
   errno = saved_errno;
 }
 
-// void sendFile(char *filePath, int sockfd){
-// 	FILE *fileToBeSent;
-// 	long size;
-// 	char *sender;
-//
-// 	fileToBeSent = fopen(filePath, "rb");
-// 	if(fileToBeSent){
-// 		fseek(fileToBeSent, 0, SEEK_END); // coloca indicador no fim do arquivo
-// 		size = ftell(fileToBeSent); // pega o tamanho usando o indicador
-// 		rewind(fileToBeSent); // volta indicador ao início
-// 		sender = (char *) malloc(sizeof(char) * size); // alloca espaço para mandar todo o arquivo
-// 		fread(sender, 1, size, fileToBeSent); // armazena em sender o arquivo
-// 		// printf("Dados do sender: %s", sender);
-// 		int i = send(sockfd, sender, size, 0); // manda ao socket os dados que armazenamos em sender
-// 		//printf("i: %d\n", i);//DEBUG
-// 		fclose(fileToBeSent);
-// 		free(sender);
-// 	}
-// }
 
 void sendFile(char *filePath, int sockfd){
-	FILE *fileToBeSent;
 	char buffer[BUFFSIZE];
 	int bytesRead, bytesSent;
 	int fd = open(filePath, O_RDONLY);
@@ -335,12 +315,12 @@ void forkExecution(int sockfd){
 }
 
 void threadExecution(int sockfd, int n){
-  pthread_t tids[n];
+  	pthread_t tids[n];
 	int i;
 	sem_init(&mutex, 0, 1);
 
 	for(i = 0; i < n; i++){
-		pthread_create(&tids[i], NULL, (void*) &threadRoutine, &sockfd);
+		pthread_create(&tids[i], NULL, threadRoutine, &sockfd);
 	}
 
 	for(i = 0; i < n; i++){
@@ -351,7 +331,7 @@ void threadExecution(int sockfd, int n){
 	return;
 }
 
-static void *threadRoutine(void *arg){
+void* threadRoutine(void *arg){
 	socklen_t clilen; //tamnho do cliente
 	struct sockaddr_in cli_addr; //estrutura do cliente
 	int sockfd, connfd;
@@ -371,13 +351,15 @@ void serverRespond(int connfd){
 	char buffer[BUFFSIZE];
 	int n;
 	int reqLineIsOK, fileExists;
-	DIR* dir;
 	int connection;
 
 	do{
 		memset(buffer, 0, sizeof(buffer));
-
-		if(n = recv(connfd, buffer, sizeof(buffer), 0) < 0) {
+		do{
+			n += recv(connfd, buffer+n, BUFFSIZE-n, 0);
+		}while(strcmp(buffer+n-4,"\r\n\r\n") != 0);
+		// n = recv(connfd, buffer, BUFFSIZE, 0);
+		if(n < 0) {
 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
 			// printf("if3\n"); // DEBUG
 			exit(1);
@@ -386,7 +368,7 @@ void serverRespond(int connfd){
 		printf("Request recebida abaixo:\n%s\n", buffer); //DEBUG
 
 		// Tratar connection aqui
-		connection = checkConnection(buffer); // DEBUG
+		connection = checkConnection(buffer);
 		printf("conn: %d\n", connection); // DEBUG
 
 		char* requestLine = getRequestLine(buffer);
@@ -428,10 +410,10 @@ void serverRespond(int connfd){
 
 					if(core[strlen(core)-1] != '/'){
 						sendRedirectPage(connfd, core);
-						// return; // TODO: talvez esse return tenha que ficar aqui
 					}
-					sendDirectory(connfd, core);
-					printf("PASSOU DO sendDirectory\n");//DEBUG
+						sendDirectory(connfd, core);
+						printf("PASSOU DO sendDirectory\n");//DEBUG	
+					
 				} else { // caso requisicao de arquivo
 					fileExists = checkFileExistence(core);
 					// printf("fileExists: %d\n", fileExists); // DEBUG
@@ -516,7 +498,7 @@ void sendDirectory(int connfd, char* dirPath){
   		fprintf(dirResponse,"</body>");
   		fprintf(dirResponse,"\r\n");
 		fprintf(dirResponse,"</html>");
-		fprintf(dirResponse,"\0");
+		fprintf(dirResponse,"%c",'\0');
 
   		closedir (dir);
   		fclose(dirResponse);
@@ -540,7 +522,7 @@ void sendRedirectPage(int connfd, char* dirPath){
 	fprintf(redirectionPage, "<meta charset=\"UTF-8\">");
 	fprintf(redirectionPage, "\r\n");
 	fprintf(redirectionPage, "<meta http-equiv=\"refresh\" content=\"0;/");
-	fprintf(redirectionPage, red_link);
+	fprintf(redirectionPage,"%s", red_link);
 	fprintf(redirectionPage, "\" />");
 	fprintf(redirectionPage, "\r\n");
 	fprintf(redirectionPage, "</head>");
@@ -550,7 +532,7 @@ void sendRedirectPage(int connfd, char* dirPath){
 	fprintf(redirectionPage, "</body>");
 	fprintf(redirectionPage, "\r\n");
 	fprintf(redirectionPage, "</html>");
-	fprintf(redirectionPage,"\0");
+	fprintf(redirectionPage,"%c",'\0');
 	fclose(redirectionPage);
 	sendResponseHeader(OKCASE, "redirect_page.html", connfd, KEEPALIVECONN);
 	sendFile("redirect_page.html", connfd);
