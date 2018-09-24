@@ -1,0 +1,30 @@
+1. Compilar com a linha de comando: gcc http_server.c -Wall -pedantic -std=gnu99 -o server -pthread
+
+2. Executar com ./server httpd -f 8081 e mostrar funcionando
+
+3. Executar com ./server httpd -f e mostrar funcionando (porta padrão)
+
+4. Navegar nas pastas, mostrando arquivos txt, gif e imagens
+
+5. Mostrar mensagem de erro fazendo a requisição localhost:8080/docs/essapastanaoexiste
+
+6. Mostrar mensagem de erro fazendo a requisição localhost:8080/docs/img/essaimagemnaoexiste.png
+
+7. Mostrar requisição de cgi-bin: localhost:8080/cgi-bin/soma?a=10&b=12 * firefox
+
+8. Ir para o telnet e demonstrar que ao apertar enter o telnet já envia a requisição
+
+9. Procurar em http_server.c a tag ROTEIRO e descomentar o do-while
+
+10. Mostrar telnet funcionando com cabeçalho de duas linhas, já mostrando conexao persistente:
+GET / HTTP/1.1
+Connection: close
+
+GET / HTTP/1.1
+Connection: keep-alive
+
+11. Mostrar que agora no navegador, a requisição as vezes não é enviada
+
+12. Executar com thread: ./server http -t 3
+
+13. Fazer requisição até falhar

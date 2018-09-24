@@ -334,11 +334,11 @@ void serverRespond(int connfd){
 	do{
 		memset(buffer, 0, sizeof(buffer));
 
-		// do{ // ROTEIRO: esse laço serve para telnet
-		// 	n += recv(connfd, buffer+n, BUFFSIZE-n, 0);
-		// }while(strcmp(buffer+n-4,"\r\n\r\n") != 0);
+		do{ // ROTEIRO: esse laço serve para telnet
+			n += recv(connfd, buffer+n, BUFFSIZE-n, 0);
+		}while(strcmp(buffer+n-4,"\r\n\r\n") != 0);
 
-		n = recv(connfd, buffer, BUFFSIZE, 0); // ROTEIRO: essa linha serve para navegador
+		// n = recv(connfd, buffer, BUFFSIZE, 0); // ROTEIRO: essa linha serve para navegador
 
 		if(n < 0) {
 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
@@ -387,9 +387,11 @@ void serverRespond(int connfd){
 				if(opendir(core) != NULL){
 
 					if(core[strlen(core)-1] != '/'){
+						sendResponseHeader(OKCASE, "redirect_page.html", connfd, connection);
 						sendRedirectPage(connfd, core);
 					}
-						sendDirectory(connfd, core);
+					sendResponseHeader(OKCASE, "listDir.html", connfd, connection);
+					sendDirectory(connfd, core);
 
 				} else { // caso requisicao de arquivo
 					fileExists = checkFileExistence(core);
@@ -462,7 +464,6 @@ void sendDirectory(int connfd, char* dirPath){
 
   		closedir (dir);
   		fclose(dirResponse);
-  		sendResponseHeader(OKCASE, "listDir.html", connfd, KEEPALIVECONN);
   		sendFile("listDir.html", connfd);
 	}
 
@@ -494,6 +495,5 @@ void sendRedirectPage(int connfd, char* dirPath){
 	fprintf(redirectionPage, "</html>");
 	fprintf(redirectionPage,"%c",'\0');
 	fclose(redirectionPage);
-	sendResponseHeader(OKCASE, "redirect_page.html", connfd, KEEPALIVECONN);
 	sendFile("redirect_page.html", connfd);
 }
