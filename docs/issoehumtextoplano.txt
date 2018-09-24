@@ -1,0 +1,4 @@
+This is a .txt file example.
+This is just plain text.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis sit amet lacinia dolor. In eget magna ac leo pharetra porttitor. Sed sagittis ut purus vitae ornare. Praesent quis ullamcorper leo, vitae lacinia ex. Cras in dolor tellus. Proin fermentum nulla sit amet dictum luctus. Integer egestas magna at quam viverra, sed iaculis sapien dignissim. Duis porta turpis vitae pulvinar tempor. Integer bibendum dictum sem. Nullam tempor ipsum ac lorem rutrum fringilla. Mauris egestas maximus est id ultricies. Nunc varius condimentum odio, at volutpat nibh consectetur ut. Interdum et malesuada fames ac ante ipsum primis in faucibus. Donec felis urna, laoreet at malesuada porta, suscipit a urna. Quisque sed felis augue.

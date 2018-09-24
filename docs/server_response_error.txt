@@ -1,5 +1,0 @@
-HTTP/1.1 404 File Not Found
-Server: FACOMRC-2016/1.0
-Content-type: text/plain
-
-Sua página não pôde ser encontrada.

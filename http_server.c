@@ -17,13 +17,15 @@
 #include "cgi_bin.c"
 
 #define LISTEN_ENQ 5
-#define FORKORTHREAD 1
-#define PORTF 2
-#define PORTT 3
+#define HTTP_D 1
+#define FORKORTHREAD 2
+#define NTHREADS 3
+#define PORTF 3
+#define PORTT 4
 #define FORK 0
 #define THREAD 1
 #define BUFFSIZE 1024
-#define NTHREADS 2
+
 #define BADREQUESTCASE 0
 #define OKCASE 1
 #define NOTFOUNDCASE 2
@@ -52,20 +54,14 @@ int main(int argc, char** argv) {
 	int sockfd;
 	int port;
 
-
-	if(argc < 2 || argc > 4) {
-		fprintf(stderr, "Usage: %s <-f or -t> <if -t, n. of threads> <port>\n", argv[0]);
-		exit(1);
-	}
-
-	if(strcmp(argv[FORKORTHREAD], "-f") == 0){
+	if((strcmp(argv[HTTP_D], "httpd") == 0) && (strcmp(argv[FORKORTHREAD], "-f") == 0)){
 		forkOrThread = FORK;
-		if(argc == 3) port = atoi(argv[PORTF]);
+		if(argc == 4) port = atoi(argv[PORTF]);
 		else port = 8080;
 	}
-	else if(strcmp(argv[FORKORTHREAD], "-t") == 0){
+	else if((strcmp(argv[HTTP_D], "http") == 0) && (strcmp(argv[FORKORTHREAD], "-t") == 0)){
 		forkOrThread = THREAD;
-		if(argc == 4) port = atoi(argv[PORTT]);
+		if(argc == 5) port = atoi(argv[PORTT]);
 		else port = 8080;
 	}
 	else {
@@ -81,7 +77,7 @@ int main(int argc, char** argv) {
 	}
 
 	// lidando com processos zumbis
-	// http://www.microhowto.info/howto/reap_zombie_processes_using_a_sigchld_handler.html
+	// referencia: http://www.microhowto.info/howto/reap_zombie_processes_using_a_sigchld_handler.html
 	if(forkOrThread == FORK){
 		struct sigaction sa;
 		sa.sa_handler = &handleSIGCHLD;
@@ -161,10 +157,10 @@ int checkFileExistence(char* filePath){
 
 void sendResponseHeader(int responseCase, char* core, int sockfd, int connection){
 	// Dados de Date:
-	char date[29];
-  	time_t now = time(0);
-  	struct tm tm = *gmtime(&now);
-  	strftime(date, sizeof(date), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	// char date[29];
+  // time_t now = time(0);
+  // struct tm tm = *gmtime(&now);
+  // strftime(date, sizeof(date), "%a, %d %b %Y %H:%M:%S %Z", &tm);
 	char responseHeader[BUFFSIZE];
 
 	if(responseCase == BADREQUESTCASE){
@@ -227,11 +223,7 @@ char* getContentLen(char* filePath){
 	FILE *file;
 	long size;
 
-	if(filePath[0] == '/'){
-		file = fopen(filePath+1, "rb");
-	}else{
-		file = fopen(filePath, "rb");
-	}
+	file = fopen(filePath, "rb");
 	fseek(file, 0, SEEK_END); // coloca indicador no fim do arquivo
 	size = ftell(file); // pega o tamanho usando o indicador
 	char* str = malloc(sizeof(char)*10);
@@ -264,7 +256,7 @@ int createSocket(int port){
 }
 
 void forkExecution(int sockfd){
-	socklen_t clilen; //tamnho do cliente
+	socklen_t clilen; //tamanho do cliente
 	struct sockaddr_in cli_addr; //estrutura do cliente
 	pid_t pid; //id do processo
 	int connfd; //file descriptor pra cada conexão de cliente
@@ -272,7 +264,7 @@ void forkExecution(int sockfd){
 	clilen = sizeof(cli_addr);
 
 
-	while(1) { //loop d conexão
+	while(1) { //loop de conexão
 		memset((char*) &cli_addr, 0, sizeof(cli_addr)); //zera o serv_addr
 		connfd = accept(sockfd, (struct sockaddr*) &cli_addr, (unsigned int*) &clilen);//tenta nova conexão
 		if(connfd < 0) { //verifica erro
@@ -281,7 +273,7 @@ void forkExecution(int sockfd){
 		}
 
 		pid = fork(); //cria um novo processo
-		if(pid < 0) { //erro no fork?
+		if(pid < 0) { //erro no fork
 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
 			exit(1);
 		}
@@ -318,7 +310,7 @@ void threadExecution(int sockfd, int n){
 }
 
 void* threadRoutine(void *arg){
-	socklen_t clilen; //tamnho do cliente
+	socklen_t clilen; //tamanho do cliente
 	struct sockaddr_in cli_addr; //estrutura do cliente
 	int sockfd, connfd;
 
@@ -341,10 +333,13 @@ void serverRespond(int connfd){
 
 	do{
 		memset(buffer, 0, sizeof(buffer));
-		// do{ //esse laço serve para telnet
+
+		// do{ // ROTEIRO: esse laço serve para telnet
 		// 	n += recv(connfd, buffer+n, BUFFSIZE-n, 0);
 		// }while(strcmp(buffer+n-4,"\r\n\r\n") != 0);
-		n = recv(connfd, buffer, BUFFSIZE, 0); //serve para navegador
+
+		n = recv(connfd, buffer, BUFFSIZE, 0); // ROTEIRO: essa linha serve para navegador
+
 		if(n < 0) {
 			fprintf(stderr, "ERROR: %s\n", strerror(errno));
 			exit(1);
@@ -352,7 +347,6 @@ void serverRespond(int connfd){
 
 		printf("Request recebida abaixo:\n%s\n", buffer); //DEBUG
 
-		// Tratar connection aqui
 		connection = checkConnection(buffer);
 
 		char* requestLine = getRequestLine(buffer);
@@ -385,10 +379,10 @@ void serverRespond(int connfd){
 				close(connfd);
 				char * arg[] = {NULL};
 
-                if(execv(scriptPath, arg) < 0) {
-                    fprintf(stderr, "ERROR: %s\n", strerror(errno));
-                    exit(1);
-                }
+        if(execv(scriptPath, arg) < 0) {
+        	fprintf(stderr, "ERROR: %s\n", strerror(errno));
+          exit(1);
+        }
 			} else { // caso navegacao de diretorio
 				if(opendir(core) != NULL){
 
@@ -443,7 +437,7 @@ void sendDirectory(int connfd, char* dirPath){
 
   			if (strcmp(ent->d_name,".") != 0 && strcmp(ent->d_name,"..") != 0){
 
-  				strcpy(href, "<a href=\""); // coloquei / pra vir da raiz
+  				strcpy(href, "<a href=\""); // a / serve para vir da raiz
   				if (getDocType(ent->d_name) == NULL){
   					strcat(href, ent->d_name);
   					strcat(href,"/");
